@@ -1,0 +1,702 @@
+{
+  "dplyr": [
+    {
+      "name": "filter",
+      "type": "function",
+      "signature": "filter(.data, ..., .by = NULL, .preserve = FALSE)",
+      "doc": "Keep rows that match a condition."
+    },
+    {
+      "name": "mutate",
+      "type": "function",
+      "signature": "mutate(.data, ...)",
+      "doc": "Create, modify, and delete columns."
+    },
+    {
+      "name": "select",
+      "type": "function",
+      "signature": "select(.data, ...)",
+      "doc": "Keep or drop columns using their names and types."
+    },
+    {
+      "name": "arrange",
+      "type": "function",
+      "signature": "arrange(.data, ..., .by_group = FALSE)",
+      "doc": "Order rows using column values."
+    },
+    {
+      "name": "summarise",
+      "type": "function",
+      "signature": "summarise(.data, ..., .by = NULL, .groups = NULL)",
+      "doc": "Summarise each group down to one row."
+    },
+    {
+      "name": "group_by",
+      "type": "function",
+      "signature": "group_by(.data, ..., .add = FALSE)",
+      "doc": "Group a data frame by one or more variables."
+    }
+  ],
+  "composer": [
+    {
+      "name": "add_boxes",
+      "type": "function",
+      "signature": "add_boxes(fig, group_by = NULL, color_by = NULL, color_key = NULL, style = list())",
+      "doc": "Add a Boxplot layer"
+    },
+    {
+      "name": "add_caption",
+      "type": "function",
+      "signature": "add_caption(fig, text)",
+      "doc": "Add Caption"
+    },
+    {
+      "name": "add_ecdf",
+      "type": "function",
+      "signature": "add_ecdf(fig, group_by = NULL, type_by = NULL, type_key = NULL, style = list())",
+      "doc": "Add Empirical Cumulative Distribution Function"
+    },
+    {
+      "name": "add_errorbars",
+      "type": "function",
+      "signature": "add_errorbars(fig, group_by = NULL, shape_by = NULL, shape_key = NULL, ci = 0.95, direction = \"both\", nudge = c(0, 0), style = list())",
+      "doc": "Add Error Bars"
+    },
+    {
+      "name": "add_legend",
+      "type": "function",
+      "signature": "add_legend(fig, position = \"bottom\", inside = FALSE, ncol = NULL, border = FALSE)",
+      "doc": "Add Legend"
+    },
+    {
+      "name": "add_lines",
+      "type": "function",
+      "signature": "add_lines(fig, group_by = NULL, combine = NULL, type_by = NULL, type_key = NULL, style = list())",
+      "doc": "Add a Line Layer"
+    },
+    {
+      "name": "add_points",
+      "type": "function",
+      "signature": "add_points(fig, group_by = NULL, combine = NULL, shape_by = NULL, shape_key = NULL, style = list(), jitter = c(0, 0))",
+      "doc": "Add a Point Layer"
+    },
+    {
+      "name": "add_reflines",
+      "type": "function",
+      "signature": "add_reflines(fig, x = NULL, y = NULL, style = list())",
+      "doc": "Add Reference Lines"
+    },
+    {
+      "name": "add_waterfall",
+      "type": "function",
+      "signature": "add_waterfall(fig, group_by = NULL, color_by = NULL, color_key = NULL, stat = \"mean\", order = \"none\", style = list())",
+      "doc": "Add Waterfall Plot"
+    },
+    {
+      "name": "as_ft_group",
+      "type": "function",
+      "signature": "as_ft_group(tables)",
+      "doc": "Convert a list of flextables to ft_group"
+    },
+    {
+      "name": "as_list",
+      "type": "function",
+      "signature": "as_list(x, ...)",
+      "doc": "Convert a composer object to a nested list"
+    },
+    {
+      "name": "bin_date",
+      "type": "function",
+      "signature": "bin_date(data, date, into, fmt = \"%b%Y\", upper = TRUE)",
+      "doc": "Derive a chronologically-ordered factor from a date"
+    },
+    {
+      "name": "bin_numeric",
+      "type": "function",
+      "signature": "bin_numeric(data, variable, breaks, labels, into = variable)",
+      "doc": "Bin a numeric variable into ordered categories"
+    },
+    {
+      "name": "block_categorical",
+      "type": "function",
+      "signature": "block_categorical(x = NULL, ...)",
+      "doc": "Create a categorical variable block"
+    },
+    {
+      "name": "block_continuous",
+      "type": "function",
+      "signature": "block_continuous(x = NULL, ...)",
+      "doc": "Create a continuous variable block"
+    },
+    {
+      "name": "block_count",
+      "type": "function",
+      "signature": "block_count(x = NULL, ...)",
+      "doc": "Create a count block"
+    },
+    {
+      "name": "block_custom",
+      "type": "function",
+      "signature": "block_custom(x = NULL, ...)",
+      "doc": "Create a custom block with flexible structure"
+    },
+    {
+      "name": "block_grouped_categorical",
+      "type": "function",
+      "signature": "block_grouped_categorical(x = NULL, ...)",
+      "doc": "Create a grouped categorical block"
+    },
+    {
+      "name": "block_hierarchy",
+      "type": "function",
+      "signature": "block_hierarchy(x = NULL, ...)",
+      "doc": "Create a hierarchy block (e.g., SOC/PT)"
+    },
+    {
+      "name": "block_hierarchy_count",
+      "type": "function",
+      "signature": "block_hierarchy_count(x = NULL, ...)",
+      "doc": "Create a hierarchy count block (counts events, not subjects)"
+    },
+    {
+      "name": "block_over",
+      "type": "function",
+      "signature": "block_over(x = NULL, ...)",
+      "doc": "Iterate an inner block over values of a variable"
+    },
+    {
+      "name": "block_response_rate",
+      "type": "function",
+      "signature": "block_response_rate(x = NULL, ...)",
+      "doc": "Response-rate block with binomial confidence interval"
+    },
+    {
+      "name": "block_section",
+      "type": "function",
+      "signature": "block_section(x = NULL, ...)",
+      "doc": "Create a section block (visual grouper for blocks)"
+    },
+    {
+      "name": "block_shift",
+      "type": "function",
+      "signature": "block_shift(x = NULL, ...)",
+      "doc": "Create a shift table block"
+    },
+    {
+      "name": "block_summary",
+      "type": "function",
+      "signature": "block_summary(x = NULL, ...)",
+      "doc": "Deprecated: use block_continuous(orientation = \"cols\")"
+    },
+    {
+      "name": "block_tte",
+      "type": "function",
+      "signature": "block_tte(x = NULL, ...)",
+      "doc": "Time-to-event block"
+    },
+    {
+      "name": "by",
+      "type": "function",
+      "signature": "by(..., variable = NULL, levels = NULL, computation = compute(), statistic = NULL, filter = NULL, bigN_format = NULL, pools = NULL)",
+      "doc": "Create a by object for split-apply-combine operations"
+    },
+    {
+      "name": "calculate",
+      "type": "function",
+      "signature": "calculate(stub, data, groups, group_levels, table = NULL)",
+      "doc": "Calculate Results Based on Stub"
+    },
+    {
+      "name": "clinical_styling",
+      "type": "function",
+      "signature": "clinical_styling(gt_obj)",
+      "doc": "Clinical/Regulatory Table Styling"
+    },
+    {
+      "name": "colgroup",
+      "type": "function",
+      "signature": "colgroup(table, by = NULL, ...)",
+      "doc": "Create a column group for tables"
+    },
+    {
+      "name": "collapse_cl",
+      "type": "function",
+      "signature": "collapse_cl(data, variable, buckets, into = \"GROUP\")",
+      "doc": "Collapse variable levels into overlapping codelist groups"
+    },
+    {
+      "name": "collapse_flags",
+      "type": "function",
+      "signature": "collapse_flags(data, flags, into = \"POPCAT\")",
+      "doc": "Stack rows by independent flag columns"
+    },
+    {
+      "name": "column",
+      "type": "function",
+      "signature": "column(table, label, ..., computation = compute(.by = \"row\"), population = function(x) length(unique(x)), shift = 0L)",
+      "doc": "Add column"
+    },
+    {
+      "name": "compose",
+      "type": "function",
+      "signature": "compose(x, ...)",
+      "doc": "Build Composer Output"
+    },
+    {
+      "name": "compute",
+      "type": "function",
+      "signature": "compute(format = \"\", ..., .missing = \"0\", .by = c(\"cell\", \"row\"))",
+      "doc": "Create a compute object for table calculations"
+    },
+    {
+      "name": "cumulate",
+      "type": "function",
+      "signature": "cumulate(data, period)",
+      "doc": "Expand rows for cumulative counting"
+    },
+    {
+      "name": "enforce",
+      "type": "function",
+      "signature": "enforce(...)",
+      "doc": "Enforce a set of levels"
+    },
+    {
+      "name": "expand_variables",
+      "type": "function",
+      "signature": "expand_variables(x, variables = list())",
+      "doc": "Expand Variables for column groups"
+    },
+    {
+      "name": "export_sas_driver",
+      "type": "function",
+      "signature": "export_sas_driver(table, path, macro_path = \"/macros/composer_macros.sas\", data_lib = \"adam\", out_path = \"/outputs\", protocol = NULL, doc_status = \"DRAFT\")",
+      "doc": "Export SAS Driver Program"
+    },
+    {
+      "name": "export_sas_spec",
+      "type": "function",
+      "signature": "export_sas_spec(table, path, format = \"csv\")",
+      "doc": "Export Table Specification for SAS Consumption"
+    },
+    {
+      "name": "figure",
+      "type": "function",
+      "signature": "figure(data = NULL, ...)",
+      "doc": "Create a figure"
+    },
+    {
+      "name": "figure_image",
+      "type": "function",
+      "signature": "figure_image(path, ggplot, output_number = NULL, title = NULL, population = NULL, footnotes = NULL, programming_notes = NULL, reporting_events = NULL, file_name = NULL, layout_notes = NULL, height = 600, caption = NULL, alt_text = NULL, page_by_label = NULL)",
+      "doc": "Create Simple Figure Image-Based Structure"
+    },
+    {
+      "name": "footnote",
+      "type": "function",
+      "signature": "footnote(text, col_id = NULL, row_id = NULL)",
+      "doc": "Create a footnote object"
+    },
+    {
+      "name": "format_count_pct",
+      "type": "function",
+      "signature": "format_count_pct(n, pct, decimals = 1L)",
+      "doc": "Format count and percentage with config rules"
+    },
+    {
+      "name": "format_denominator",
+      "type": "function",
+      "signature": "format_denominator(n)",
+      "doc": "Format denominator display (n = X)"
+    },
+    {
+      "name": "ft_apply_markdown",
+      "type": "function",
+      "signature": "ft_apply_markdown(ft_obj)",
+      "doc": "Apply markdown formatting to a flextable"
+    },
+    {
+      "name": "ft_clinical_styling",
+      "type": "function",
+      "signature": "ft_clinical_styling(ft_obj)",
+      "doc": "Clinical/Regulatory Table Styling for flextable"
+    },
+    {
+      "name": "ft_figure_styling",
+      "type": "function",
+      "signature": "ft_figure_styling(ft_obj)",
+      "doc": "Style a flextable for figures"
+    },
+    {
+      "name": "ft_footer",
+      "type": "function",
+      "signature": "ft_footer(ft_obj, footer, programming_notes, reporting_events, file_name = NULL, layout_notes = NULL)",
+      "doc": "Add a footer to a flextable"
+    },
+    {
+      "name": "ft_group",
+      "type": "function",
+      "signature": "ft_group(..., .list = list(...))",
+      "doc": "Create a group of flextable objects"
+    },
+    {
+      "name": "ft_group_add",
+      "type": "function",
+      "signature": "ft_group_add(group, ...)",
+      "doc": "Add a table to an ft_group"
+    },
+    {
+      "name": "ft_header",
+      "type": "function",
+      "signature": "ft_header(ft_obj, output_number, title, population, page_by_label = NULL)",
+      "doc": "Add a header to a flextable"
+    },
+    {
+      "name": "ft_heading_separator",
+      "type": "function",
+      "signature": "ft_heading_separator(ft_obj, n_col_header_rows)",
+      "doc": "Draw a horizontal line below the heading block of a flextable"
+    },
+    {
+      "name": "ft_listing_styling",
+      "type": "function",
+      "signature": "ft_listing_styling(ft_obj)",
+      "doc": "Style a flextable for listings"
+    },
+    {
+      "name": "ft_set_properties",
+      "type": "function",
+      "signature": "ft_set_properties(ft_obj, layout = \"autofit\", width = 1, scroll_height = NULL)",
+      "doc": "Set flextable table properties"
+    },
+    {
+      "name": "ft_table_styling",
+      "type": "function",
+      "signature": "ft_table_styling(ft_obj)",
+      "doc": "Style a flextable for tables"
+    },
+    {
+      "name": "fun_pkconc",
+      "type": "function",
+      "signature": "fun_pkconc(t = NULL, thalf = 8, cmax = 100)",
+      "doc": "PK concentration curve function"
+    },
+    {
+      "name": "get_backend",
+      "type": "function",
+      "signature": "get_backend(backend = NULL)",
+      "doc": "Get the rendering backend"
+    },
+    {
+      "name": "get_json",
+      "type": "function",
+      "signature": "get_json(x, pretty = TRUE, ...)",
+      "doc": "Serialise a composer_table to a JSON string"
+    },
+    {
+      "name": "gt_footer",
+      "type": "function",
+      "signature": "gt_footer(gt_obj, footer, programming_notes, reporting_events, file_name = NULL, layout_notes = NULL)",
+      "doc": "Add a footer to a figure, listing or table"
+    },
+    {
+      "name": "gt_header",
+      "type": "function",
+      "signature": "gt_header(gt_obj, output_number, title, population, page_by_label = NULL)",
+      "doc": "Add a header to a figure, listing or table"
+    },
+    {
+      "name": "is_codelist",
+      "type": "function",
+      "signature": "is_codelist(x)",
+      "doc": "Check if object is a codelist"
+    },
+    {
+      "name": "keep_worst",
+      "type": "function",
+      "signature": "keep_worst(data, variable, levels = NULL, id = \"USUBJID\", by = NULL)",
+      "doc": "Keep worst value per subject and group"
+    },
+    {
+      "name": "knit_print.ft_group",
+      "type": "function",
+      "signature": "knit_print.ft_group(x, ...)",
+      "doc": "Knit print method for ft_group"
+    },
+    {
+      "name": "list_stats",
+      "type": "function",
+      "signature": "list_stats()",
+      "doc": "List Available Stats"
+    },
+    {
+      "name": "listing",
+      "type": "function",
+      "signature": "listing(data = NULL, output_number = NULL, title = NULL, population = NULL, footnotes = NULL, programming_notes = NULL, reporting_events = NULL, page_by = NULL, ...)",
+      "doc": "Create a listing object"
+    },
+    {
+      "name": "listing_col",
+      "type": "function",
+      "signature": "listing_col(listing, col, formats = NULL)",
+      "doc": "Add columns to a listing"
+    },
+    {
+      "name": "listing_deduplicate",
+      "type": "function",
+      "signature": "listing_deduplicate(listing, deduplicate)",
+      "doc": "Deduplicate a column in a listing"
+    },
+    {
+      "name": "listing_group",
+      "type": "function",
+      "signature": "listing_group(listing, col, label = \"Group\")",
+      "doc": "Add a listing group (Deprecated)"
+    },
+    {
+      "name": "listing_groupname_col",
+      "type": "function",
+      "signature": "listing_groupname_col(listing, col)",
+      "doc": "Add a groupname column to a listing"
+    },
+    {
+      "name": "listing_image",
+      "type": "function",
+      "signature": "listing_image(path, ggplot, output_number = NULL, title = NULL, population = NULL, footnotes = NULL, programming_notes = NULL, reporting_events = NULL, file_name = NULL, layout_notes = NULL, height = 600, caption = NULL, alt_text = NULL, page_by_label = NULL)",
+      "doc": "Create Simple Listing Image-Based Structure"
+    },
+    {
+      "name": "listing_mock_n",
+      "type": "function",
+      "signature": "listing_mock_n(listing, mock_n)",
+      "doc": "Mock n rows"
+    },
+    {
+      "name": "listing_nest",
+      "type": "function",
+      "signature": "listing_nest(listing, nest)",
+      "doc": "Nest a column in a listing"
+    },
+    {
+      "name": "listing_rowname_col",
+      "type": "function",
+      "signature": "listing_rowname_col(listing, col)",
+      "doc": "Add a rowname column"
+    },
+    {
+      "name": "listing_spanners",
+      "type": "function",
+      "signature": "listing_spanners(listing, spanners)",
+      "doc": "Add a column label spanner"
+    },
+    {
+      "name": "make_codelist",
+      "type": "function",
+      "signature": "make_codelist(codelist)",
+      "doc": "Make a codelist callback (deprecated)"
+    },
+    {
+      "name": "make_codelist_database",
+      "type": "function",
+      "signature": "make_codelist_database(callback)",
+      "doc": "Make a codelist callback from a database lookup"
+    },
+    {
+      "name": "make_denom",
+      "type": "function",
+      "signature": "make_denom(data, pop = NULL, id = \"USUBJID\", trt = \"TRT01A\", as = trt, expand = NULL)",
+      "doc": "Create a denominator dataset for a population"
+    },
+    {
+      "name": "mock",
+      "type": "function",
+      "signature": "mock(stub, groups, group_levels, table = NULL)",
+      "doc": "Mock Data Based on Stub"
+    },
+    {
+      "name": "mock_assign",
+      "type": "function",
+      "signature": "mock_assign(df, ..., from = NULL)",
+      "doc": "Assign new columns by mapping from existing values"
+    },
+    {
+      "name": "mock_dataset",
+      "type": "function",
+      "signature": "mock_dataset()",
+      "doc": "Initialise an empty mock dataset"
+    },
+    {
+      "name": "mock_expand",
+      "type": "function",
+      "signature": "mock_expand(df, ...)",
+      "doc": "Expand a mock dataset by new categories"
+    },
+    {
+      "name": "mock_insert",
+      "type": "function",
+      "signature": "mock_insert(df, ...)",
+      "doc": "Insert columns into a mock dataset"
+    },
+    {
+      "name": "mock_pkconc",
+      "type": "function",
+      "signature": "mock_pkconc(cmax = 100, tmax = 2, t_half = 8, n_subjects = 6, times = c(0, 0.5, 1, 2, 4, 8, 12, 24), treatments = c(\"Treatment A\", \"Treatment B\"), route = c(\"oral\", \"iv\"), trial_type = c(\"crossover\", \"parallel\"), variability = 0.1)",
+      "doc": "Default method for generating mock PK concentration data in ADAM format"
+    },
+    {
+      "name": "mock_values",
+      "type": "function",
+      "signature": "mock_values(df, ..., from = NULL)",
+      "doc": "Generate column values by applying a function"
+    },
+    {
+      "name": "new_figure",
+      "type": "function",
+      "signature": "new_figure(fig, title = NULL, subtitle = NULL, border = FALSE)",
+      "doc": "Start a New Figure"
+    },
+    {
+      "name": "page_by",
+      "type": "function",
+      "signature": "page_by(variables, label = NULL, levels = NULL)",
+      "doc": "Create a page_by definition"
+    },
+    {
+      "name": "pert_noise",
+      "type": "function",
+      "signature": "pert_noise(df, col, amount, by = NULL)",
+      "doc": "Perturb a numeric column"
+    },
+    {
+      "name": "pert_scale",
+      "type": "function",
+      "signature": "pert_scale(df, col, amount, by = NULL)",
+      "doc": "Perturb a numeric column"
+    },
+    {
+      "name": "pert_shift",
+      "type": "function",
+      "signature": "pert_shift(df, col, amount, by = NULL)",
+      "doc": "Perturb a numeric column"
+    },
+    {
+      "name": "pop",
+      "type": "function",
+      "signature": "pop(filter, label)",
+      "doc": "Create a population definition"
+    },
+    {
+      "name": "refine",
+      "type": "function",
+      "signature": "refine(expr)",
+      "doc": "Create a refine object for data refinement"
+    },
+    {
+      "name": "register_stat",
+      "type": "function",
+      "signature": "register_stat(name, fn, label = NULL)",
+      "doc": "Register a Stat Function"
+    },
+    {
+      "name": "remove_stat",
+      "type": "function",
+      "signature": "remove_stat(name)",
+      "doc": "Remove Stat Function"
+    },
+    {
+      "name": "resolve_codelist",
+      "type": "function",
+      "signature": "resolve_codelist(x, variable)",
+      "doc": "Resolve codelist to character vector"
+    },
+    {
+      "name": "row",
+      "type": "function",
+      "signature": "row(label = NULL, ..., computation = compute(), statistic = NULL, filter = NULL, footnote = NULL)",
+      "doc": "Create a row for tables"
+    },
+    {
+      "name": "save_ard_csv",
+      "type": "function",
+      "signature": "save_ard_csv(x, path, ...)",
+      "doc": "Save ARD to CSV file"
+    },
+    {
+      "name": "save_ard_json",
+      "type": "function",
+      "signature": "save_ard_json(x, path, pretty = TRUE, ...)",
+      "doc": "Save ARD to JSON file"
+    },
+    {
+      "name": "save_as_docx",
+      "type": "function",
+      "signature": "save_as_docx(x, path, page_size = \"letter\", page_margins = NULL, align = \"center\", ...)",
+      "doc": "Save composed table or listing to Word file"
+    },
+    {
+      "name": "save_as_html",
+      "type": "function",
+      "signature": "save_as_html(x, path, ...)",
+      "doc": "Save composed table or listing to HTML file"
+    },
+    {
+      "name": "save_as_rtf",
+      "type": "function",
+      "signature": "save_as_rtf(x, path, page_size = \"letter\", page_margins = NULL, ...)",
+      "doc": "Save composed table or listing to RTF file"
+    },
+    {
+      "name": "set_pages",
+      "type": "function",
+      "signature": "set_pages(fig, page_by)",
+      "doc": "Set Pages"
+    },
+    {
+      "name": "set_splits",
+      "type": "function",
+      "signature": "set_splits(fig, split_by, ncol = 1)",
+      "doc": "Set Splits"
+    },
+    {
+      "name": "set_x_categorical",
+      "type": "function",
+      "signature": "set_x_categorical(fig, x, label = NULL, levels = NULL, display = TRUE)",
+      "doc": "Set a Categorical x-axis"
+    },
+    {
+      "name": "set_x_continuous",
+      "type": "function",
+      "signature": "set_x_continuous(fig, x, label = NULL, transform = NULL, limits = NULL, breaks = NULL, ticks = NULL)",
+      "doc": "Set a Continuous x-axis"
+    },
+    {
+      "name": "set_y_categorical",
+      "type": "function",
+      "signature": "set_y_categorical(fig, y, label = NULL, levels = NULL, display = TRUE)",
+      "doc": "Set a Categorical y-axis"
+    },
+    {
+      "name": "set_y_continuous",
+      "type": "function",
+      "signature": "set_y_continuous(fig, y, label = NULL, transform = NULL, limits = NULL, breaks = NULL, ticks = NULL)",
+      "doc": "Set a Continuous y-axis"
+    },
+    {
+      "name": "spanner",
+      "type": "function",
+      "signature": "spanner(table, label, columns = NULL, spanners = NULL, bigN_format = NULL)",
+      "doc": "Create a spanner"
+    },
+    {
+      "name": "table",
+      "type": "function",
+      "signature": "table(..., bigN_format = \"\", total_col = c(\"none\", \"nested\", \"overall\"), id = NULL, denominator = NULL, bign_data = NULL, column_header_left = NULL, label_location = \"indented\", population = NULL, page_by = NULL)",
+      "doc": "Create a composer table object"
+    },
+    {
+      "name": "table_image",
+      "type": "function",
+      "signature": "table_image(path, ggplot, output_number = NULL, title = NULL, population = NULL, footnotes = NULL, programming_notes = NULL, reporting_events = NULL, file_name = NULL, layout_notes = NULL, height = 600, caption = NULL, alt_text = NULL, page_by_label = NULL)",
+      "doc": "Create Simple Table Image-Based Structure"
+    }
+  ]
+}

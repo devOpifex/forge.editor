@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>forge.editor demo</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 2rem;
+        max-width: 56rem;
+      }
+      #editor {
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .cm-editor {
+        height: 320px;
+      }
+      code {
+        background: #f0f0f0;
+        padding: 0 4px;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>forge.editor demo</h1>
+    <p>
+      Type <code>fil</code> for suggestions, <code>dplyr::</code> to scope to a
+      package, or hover a function name for its docs. The editor handle is
+      exposed as <code>window.ed</code> — try <code>ed.getValue()</code> and
+      <code>ed.setValue("x &lt;- 1")</code> in the console.
+    </p>
+    <div id="editor"></div>
+    <script type="module" src="/demo/main.ts"></script>
+  </body>
+</html>
