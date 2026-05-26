@@ -22,7 +22,9 @@ if ("--out" %in% args) {
   args <- args[-c(i, i + 1)]
 }
 targets <- args
-if (length(targets) == 0) stop("Provide at least one package name or source directory.")
+if (length(targets) == 0) {
+  stop("Provide at least one package name or source directory.")
+}
 
 if (!requireNamespace("jsonlite", quietly = TRUE)) {
   stop("Package 'jsonlite' is required: install.packages('jsonlite')")
@@ -33,7 +35,9 @@ if (!requireNamespace("jsonlite", quietly = TRUE)) {
 # original defaults / balanced parens are preserved.
 signature_of <- function(fn, name) {
   a <- args(fn)
-  if (is.null(a)) return(paste0(name, "()"))
+  if (is.null(a)) {
+    return(paste0(name, "()"))
+  }
   d <- deparse(a)
   d <- d[-length(d)] # drop the trailing "NULL" body line
   h <- gsub("\\s+", " ", paste(d, collapse = " "))
@@ -48,11 +52,17 @@ doc_titles <- function(pkg, dir = NULL) {
     error = function(e) NULL
   )
   titles <- list()
-  if (is.null(db)) return(titles)
+  if (is.null(db)) {
+    return(titles)
+  }
   for (rd in db) {
     tags <- vapply(rd, function(x) attr(x, "Rd_tag"), character(1))
     ti <- which(tags == "\\title")
-    title <- if (length(ti)) trimws(paste(unlist(rd[[ti[1]]]), collapse = "")) else ""
+    title <- if (length(ti)) {
+      trimws(paste(unlist(rd[[ti[1]]]), collapse = ""))
+    } else {
+      ""
+    }
     for (a in which(tags == "\\alias")) {
       alias <- trimws(paste(unlist(rd[[a]]), collapse = ""))
       titles[[alias]] <- title
@@ -68,17 +78,34 @@ resolve_target <- function(target) {
       stop("Source mode needs 'pkgload': install.packages('pkgload')")
     }
     dir <- normalizePath(target)
-    pkg <- unname(read.dcf(file.path(dir, "DESCRIPTION"), fields = "Package")[1, 1])
-    ok <- tryCatch({
-      suppressWarnings(suppressMessages(
-        pkgload::load_all(dir, export_all = FALSE, quiet = TRUE, helpers = FALSE)
-      ))
-      TRUE
-    }, error = function(e) {
-      warning(sprintf("Could not load source '%s': %s", target, conditionMessage(e)))
-      FALSE
-    })
-    if (!ok) return(NULL)
+    pkg <- unname(read.dcf(file.path(dir, "DESCRIPTION"), fields = "Package")[
+      1,
+      1
+    ])
+    ok <- tryCatch(
+      {
+        suppressWarnings(suppressMessages(
+          pkgload::load_all(
+            dir,
+            export_all = FALSE,
+            quiet = TRUE,
+            helpers = FALSE
+          )
+        ))
+        TRUE
+      },
+      error = function(e) {
+        warning(sprintf(
+          "Could not load source '%s': %s",
+          target,
+          conditionMessage(e)
+        ))
+        FALSE
+      }
+    )
+    if (!ok) {
+      return(NULL)
+    }
     list(pkg = pkg, dir = dir)
   } else {
     if (!requireNamespace(target, quietly = TRUE)) {
@@ -98,7 +125,9 @@ extract_pkg <- function(pkg, dir = NULL) {
   items <- list()
   for (name in exports) {
     obj <- tryCatch(get(name, envir = ns), error = function(e) NULL)
-    if (is.null(obj)) next
+    if (is.null(obj)) {
+      next
+    }
     is_fn <- is.function(obj)
     item <- list(name = name, type = if (is_fn) "function" else "object")
     if (is_fn) {
@@ -106,7 +135,9 @@ extract_pkg <- function(pkg, dir = NULL) {
       if (!is.null(sig)) item$signature <- sig
     }
     title <- titles[[name]]
-    if (!is.null(title) && nzchar(title)) item$doc <- title
+    if (!is.null(title) && nzchar(title)) {
+      item$doc <- title
+    }
     items[[length(items) + 1]] <- item
   }
   items
@@ -115,7 +146,9 @@ extract_pkg <- function(pkg, dir = NULL) {
 generated <- list()
 for (target in targets) {
   resolved <- resolve_target(target)
-  if (is.null(resolved)) next
+  if (is.null(resolved)) {
+    next
+  }
   items <- extract_pkg(resolved$pkg, resolved$dir)
   generated[[resolved$pkg]] <- items
   cat(sprintf("  %s: %d functions\n", resolved$pkg, length(items)))
@@ -126,7 +159,9 @@ catalog <- list()
 if (file.exists(out)) {
   catalog <- jsonlite::read_json(out, simplifyVector = FALSE)
 }
-for (pkg in names(generated)) catalog[[pkg]] <- generated[[pkg]]
+for (pkg in names(generated)) {
+  catalog[[pkg]] <- generated[[pkg]]
+}
 
 dir.create(dirname(out), showWarnings = FALSE, recursive = TRUE)
 jsonlite::write_json(catalog, out, auto_unbox = TRUE, pretty = TRUE)
