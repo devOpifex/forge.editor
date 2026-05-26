@@ -36,8 +36,21 @@ export function createEditor(parent: HTMLElement, opts: MountOptions = {}): Edit
 
   let lspWiring: ReturnType<typeof lspExtensions> | null = null;
   if (opts.lsp) {
-    lspWiring = lspExtensions(opts.lsp);
-    extensions.push(lspWiring.extension);
+    const elementId = opts.lsp.elementId ?? parent.id;
+    if (!elementId) {
+      console.warn(
+        "[forge.editor] LSP requested but the mount element has no id; " +
+          "set `lsp.elementId` explicitly or give the element an id. Falling back to the static catalog."
+      );
+    } else {
+      try {
+        lspWiring = lspExtensions({ ...opts.lsp, elementId });
+        extensions.push(lspWiring.extension);
+      } catch (err) {
+        console.warn("[forge.editor] LSP wiring failed:", err);
+        lspWiring = null;
+      }
+    }
   }
 
   const view = new EditorView({

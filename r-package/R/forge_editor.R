@@ -2,10 +2,11 @@
 #'
 #' Creates an htmlwidget hosting the forge.editor CodeMirror 6 instance.
 #' When called inside a Shiny session with `lsp = TRUE`, a per-session
-#' R `languageserver` subprocess is spawned and exposed as a JSON-RPC over
-#' HTTP endpoint so the editor can request real completion, hover, and
-#' diagnostic information. Outside Shiny (or when `languageserver` is not
-#' installed) the editor falls back silently to the bundled static catalog.
+#' R `languageserver` subprocess is spawned the first time each editor
+#' connects, and JSON-RPC traffic is tunnelled over the existing Shiny
+#' WebSocket (no extra HTTP endpoint, no polling). Outside Shiny (or when
+#' `languageserver` is not installed) the editor falls back silently to
+#' the bundled static catalog.
 #'
 #' @param value Initial document contents.
 #' @param theme One of `"light"` or `"dark"`.
@@ -15,9 +16,12 @@
 #'   Overrides the bundled default catalog.
 #' @param lsp Either `FALSE` (default), `TRUE`, or a named list of LSP
 #'   options forwarded to the JS client (`rootUri`, `documentUri`,
-#'   `languageId`, `pollIntervalMs`). Only honoured inside Shiny.
+#'   `languageId`). Only honoured inside Shiny.
 #' @param width,height Widget dimensions, passed through to htmlwidgets.
-#' @param elementId Optional explicit DOM id for the widget container.
+#' @param elementId Optional explicit DOM id for the widget container. When
+#'   `lsp` is enabled, the same id is used to namespace the Shiny
+#'   input/custom-message channels, so each editor on the page gets its own
+#'   `languageserver` subprocess.
 #'
 #' @export
 forge_editor <- function(
@@ -45,22 +49,22 @@ forge_editor <- function(
   if (!is.null(lsp_opts)) {
     session <- shiny::getDefaultReactiveDomain()
     if (!is.null(session)) {
-      url <- tryCatch(
-        start_lsp_bridge(session),
+      tryCatch(
+        ensure_lsp_init_observer(session),
         error = function(e) {
           warning(
-            "forge.editor: failed to start LSP bridge (",
+            "forge.editor: failed to install LSP init observer (",
             conditionMessage(e),
             "); falling back to static catalog.",
             call. = FALSE
           )
-          NULL
         }
       )
-      if (!is.null(url)) {
-        lsp_opts$url <- url
-        x$lsp <- lsp_opts
-      }
+      # The JS bundle reads `x$lsp` and, if present, opens a ShinyTransport
+      # using `el.id` (or `lsp$elementId`) as the channel prefix. The R-side
+      # subprocess is spawned lazily when the browser fires the init message.
+      lsp_opts$enabled <- TRUE
+      x$lsp <- lsp_opts
     }
   }
 

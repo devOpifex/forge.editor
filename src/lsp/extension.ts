@@ -1,6 +1,6 @@
 import type { Extension } from "@codemirror/state";
 import { LSPClient, languageServerExtensions } from "@codemirror/lsp-client";
-import { HttpTransport } from "./http-transport";
+import { ShinyTransport } from "./shiny-transport";
 import type { LSPOptions } from "../types";
 
 /** Result of {@link lspExtensions}: the CodeMirror extension plus a teardown hook. */
@@ -11,11 +11,14 @@ export interface LSPWiring {
 
 /**
  * Build the CodeMirror extension that wires the editor to a language server
- * over an {@link HttpTransport}. The returned object also exposes a `dispose`
+ * over a {@link ShinyTransport}. The returned object also exposes a `dispose`
  * function that should be called when the editor is destroyed.
  */
 export function lspExtensions(opts: LSPOptions): LSPWiring {
-  const transport = new HttpTransport({ url: opts.url });
+  if (!opts.elementId) {
+    throw new Error("lspExtensions requires opts.elementId");
+  }
+  const transport = new ShinyTransport({ elementId: opts.elementId });
 
   const client = new LSPClient({
     rootUri: opts.rootUri,

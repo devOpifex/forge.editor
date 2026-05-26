@@ -13,7 +13,7 @@ ui <- fluidPage(
         " to test LSP completion, hover over ",
         tags$code("filter"),
         " for live docs, and introduce a syntax error to see ",
-        "a diagnostic appear (poll interval ~1.5s)."
+        "a diagnostic appear (pushed over the Shiny WebSocket — no polling)."
       )
     ),
     column(

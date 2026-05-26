@@ -13,7 +13,7 @@ Encoding: UTF-8
 Imports:
     htmlwidgets,
     shiny,
-    jsonlite,
+    later,
     processx
 Suggests:
     languageserver

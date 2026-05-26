@@ -1,20 +1,128 @@
-# Per-session HTTP-to-stdio bridge for the R languageserver process.
+# Non-blocking, per-editor bridge to an R `languageserver` subprocess that
+# piggy-backs on the Shiny WebSocket.
 #
-# A Shiny session calls `start_lsp_bridge(session)` once on first use; that
-# spawns an Rscript subprocess running `languageserver::run()`, registers a
-# `session$registerDataObj` endpoint, and returns the relative URL the editor
-# fetches against. The endpoint receives a JSON array of JSON-RPC messages,
-# writes each one (framed with the LSP Content-Length header) to the
-# subprocess's stdin, reads all complete frames currently available on stdout,
-# and returns them as a JSON array.
+# Each browser-side editor calls `Shiny.setInputValue("forge_editor_lsp_init",
+# <elementId>, {priority: "event"})` once after mount. The session-scoped
+# init observer (installed by `ensure_lsp_init_observer`) reacts to that and
+# calls `start_lsp_bridge(session, element_id)`, which:
+#
+#   * spawns an `Rscript -e 'languageserver::run()'` subprocess via processx,
+#   * registers an `observeEvent` on `input[[paste0(element_id, "_lsp_send")]]`
+#     that writes each browser-originated JSON-RPC frame to the subprocess
+#     stdin, and
+#   * schedules a `later::later` pump that drains the subprocess stdout for
+#     complete LSP frames and pushes them to the browser as raw JSON strings
+#     via `session$sendCustomMessage(paste0(element_id, "_lsp_recv"), ...)`.
+#
+# Neither leg blocks: the observer fires when Shiny delivers an event, the
+# pump returns immediately after each non-blocking `read_output()` and
+# reschedules itself, and JSON-RPC ids are paired by the LSP client in the
+# browser, so the bridge never needs to wait for a matching response.
 
-# Per-session bridge state, keyed by `session$token`.
-.bridges <- new.env(parent = emptyenv())
+# Per-session top-level state, keyed by `session$token`.
+#   $init_installed  TRUE once `ensure_lsp_init_observer` has registered the
+#                    init observer for this session.
+#   $bridges         env keyed by element_id, holding per-editor state.
+.lsp_state <- new.env(parent = emptyenv())
 
-start_lsp_bridge <- function(session) {
+LSP_INIT_INPUT <- "forge_editor_lsp_init"
+PUMP_INTERVAL <- 0.05 # seconds; 20 ticks/s keeps editor latency imperceptible.
+ROUND_TRIP_TIMEOUT <- NA # unused; kept here only to document that the new
+# bridge has no synchronous timeout — pairing happens in the browser.
+
+#' Ensure a session has the per-session LSP init observer installed.
+#'
+#' Called from `forge_editor()` whenever `lsp` is enabled. Idempotent: only
+#' the first call installs the observer; later calls are no-ops. Without
+#' this, the browser-side `Shiny.setInputValue("forge_editor_lsp_init", ...)`
+#' would land in an unhandled input slot.
+#' @noRd
+ensure_lsp_init_observer <- function(session) {
   token <- session$token
-  if (!is.null(.bridges[[token]])) {
-    return(.bridges[[token]]$url)
+  st <- .lsp_state[[token]]
+  if (!is.null(st) && isTRUE(st$init_installed)) {
+    return(invisible(NULL))
+  }
+  if (is.null(st)) {
+    st <- list(
+      init_installed = FALSE,
+      bridges = new.env(parent = emptyenv())
+    )
+    .lsp_state[[token]] <- st
+  }
+
+  shiny::observeEvent(
+    session$input[[LSP_INIT_INPUT]],
+    {
+      element_id <- session$input[[LSP_INIT_INPUT]]
+      if (
+        is.character(element_id) &&
+          length(element_id) == 1 &&
+          nzchar(element_id)
+      ) {
+        tryCatch(
+          start_lsp_bridge(session, element_id),
+          error = function(e) {
+            warning(
+              "forge.editor: failed to start LSP bridge for '",
+              element_id,
+              "': ",
+              conditionMessage(e),
+              call. = FALSE
+            )
+          }
+        )
+      }
+    },
+    ignoreInit = TRUE,
+    domain = session
+  )
+
+  session$onSessionEnded(function() {
+    bridges <- .lsp_state[[token]]$bridges
+    if (!is.null(bridges)) {
+      for (id in ls(bridges)) {
+        b <- bridges[[id]]
+        if (!is.null(b)) {
+          b$state$alive <- FALSE
+          if (!is.null(b$obs)) {
+            try(b$obs$destroy(), silent = TRUE)
+          }
+          if (!is.null(b$state$proc) && b$state$proc$is_alive()) {
+            try(b$state$proc$kill(), silent = TRUE)
+          }
+        }
+      }
+    }
+    rm(list = token, envir = .lsp_state)
+  })
+
+  .lsp_state[[token]]$init_installed <- TRUE
+  invisible(NULL)
+}
+
+#' Spin up the per-editor bridge.
+#'
+#' Idempotent on `(session, element_id)`. Spawns the `languageserver`
+#' subprocess and installs the per-editor observer + pump.
+#' @noRd
+start_lsp_bridge <- function(session, element_id) {
+  if (
+    !is.character(element_id) || length(element_id) != 1 || !nzchar(element_id)
+  ) {
+    stop("element_id must be a non-empty character scalar", call. = FALSE)
+  }
+  token <- session$token
+  st <- .lsp_state[[token]]
+  if (is.null(st)) {
+    stop(
+      "forge.editor: init observer not installed for this session",
+      call. = FALSE
+    )
+  }
+  bridges <- st$bridges
+  if (!is.null(bridges[[element_id]])) {
+    return(invisible(element_id))
   }
 
   if (!requireNamespace("languageserver", quietly = TRUE)) {
@@ -23,176 +131,92 @@ start_lsp_bridge <- function(session) {
   if (!requireNamespace("processx", quietly = TRUE)) {
     stop("the {processx} package is required for LSP support")
   }
-  if (!requireNamespace("jsonlite", quietly = TRUE)) {
-    stop("the {jsonlite} package is required for LSP support")
+  if (!requireNamespace("later", quietly = TRUE)) {
+    stop("the {later} package is required for LSP support")
   }
 
   state <- new.env(parent = emptyenv())
-  state$proc <- NULL
-  state$stdout_buf <- raw(0)
-  state$pending_ids <- character(0)
-  state$lock <- FALSE
+  state$buf <- raw(0)
+  state$alive <- TRUE
 
-  ensure_proc <- function() {
-    if (!is.null(state$proc) && state$proc$is_alive()) {
+  rscript <- file.path(R.home("bin"), "Rscript")
+  state$proc <- processx::process$new(
+    rscript,
+    c("--vanilla", "-e", "languageserver::run()"),
+    stdin = "|",
+    stdout = "|",
+    stderr = "|"
+  )
+
+  send_input <- paste0(element_id, "_lsp_send")
+  recv_channel <- paste0(element_id, "_lsp_recv")
+
+  obs <- shiny::observeEvent(
+    session$input[[send_input]],
+    {
+      msg <- session$input[[send_input]]
+      if (!is.character(msg) || length(msg) != 1 || !nzchar(msg)) {
+        return()
+      }
+      if (!state$alive || !state$proc$is_alive()) {
+        return()
+      }
+      payload <- charToRaw(msg)
+      header <- charToRaw(sprintf(
+        "Content-Length: %d\r\n\r\n",
+        length(payload)
+      ))
+      try(state$proc$write_input(c(header, payload)), silent = TRUE)
+    },
+    ignoreInit = TRUE,
+    domain = session
+  )
+
+  pump <- function() {
+    if (!state$alive) {
       return(invisible(NULL))
     }
-    rscript <- file.path(R.home("bin"), "Rscript")
-    state$proc <- processx::process$new(
-      rscript,
-      c("--vanilla", "-e", "languageserver::run()"),
-      stdin = "|",
-      stdout = "|",
-      stderr = "|"
-    )
-    state$stdout_buf <- raw(0)
-    invisible(NULL)
-  }
-
-  handler <- function(data, req) {
-    body_raw <- req$rook.input$read(-1L)
-    body <- if (length(body_raw) > 0) rawToChar(body_raw) else "[]"
-
-    messages <- tryCatch(
-      jsonlite::fromJSON(body, simplifyVector = FALSE),
-      error = function(e) NULL
-    )
-    if (is.null(messages)) {
-      return(shiny::httpResponse(
-        400,
-        "application/json",
-        '{"error":"invalid JSON body"}'
-      ))
+    if (is.null(state$proc) || !state$proc$is_alive()) {
+      state$alive <- FALSE
+      return(invisible(NULL))
     }
-    if (!is.list(messages)) {
-      messages <- list(messages)
-    }
-
-    out <- tryCatch(
-      bridge_round_trip(state, ensure_proc, messages),
-      error = function(e) {
-        warning("forge.editor LSP bridge: ", conditionMessage(e), call. = FALSE)
-        list()
-      }
-    )
-
-    body_out <- jsonlite::toJSON(out, auto_unbox = TRUE, null = "null")
-    shiny::httpResponse(200, "application/json", body_out)
-  }
-
-  url <- session$registerDataObj("forge_lsp", state, handler)
-
-  session$onSessionEnded(function() {
-    p <- .bridges[[token]]$state$proc
-    if (!is.null(p) && p$is_alive()) {
-      try(p$kill(), silent = TRUE)
-    }
-    rm(list = token, envir = .bridges)
-  })
-
-  .bridges[[token]] <- list(url = url, state = state)
-  url
-}
-
-# Send `messages` to the subprocess and collect every complete frame that
-# arrives on stdout, blocking only long enough for responses to any message
-# that has an `id`.
-bridge_round_trip <- function(state, ensure_proc, messages) {
-  ensure_proc()
-
-  # Coarse mutual exclusion. Shiny handlers run on a single R thread but the
-  # browser may fire several POSTs back-to-back; the lock keeps the
-  # request/response pairing intact.
-  wait <- 0
-  while (state$lock && wait < 2000) {
-    Sys.sleep(0.005)
-    wait <- wait + 5
-  }
-  state$lock <- TRUE
-  on.exit(state$lock <- FALSE, add = TRUE)
-
-  expected_ids <- character(0)
-  for (msg in messages) {
-    id <- msg[["id"]]
-    if (!is.null(id)) {
-      expected_ids <- c(expected_ids, as.character(id))
-    }
-    write_lsp_frame(state$proc, msg)
-  }
-
-  state$pending_ids <- unique(c(state$pending_ids, expected_ids))
-
-  collected <- list()
-  deadline <- Sys.time() + 5 # seconds
-
-  repeat {
     chunk <- tryCatch(state$proc$read_output(), error = function(e) "")
     if (nzchar(chunk)) {
-      state$stdout_buf <- c(state$stdout_buf, charToRaw(chunk))
+      state$buf <- c(state$buf, charToRaw(chunk))
     }
-    frames <- drain_frames(state)
-    if (length(frames)) {
-      collected <- c(collected, frames)
+    frames <- drain_frame_strings(state)
+    for (frame_json in frames) {
+      tryCatch(
+        session$sendCustomMessage(recv_channel, frame_json),
+        error = function(e) {
+          # Session may be tearing down; stop the pump quietly.
+          state$alive <<- FALSE
+        }
+      )
     }
-
-    # Stop as soon as every id we sent on this round-trip has a matching
-    # response. Notifications keep flowing on subsequent polls.
-    if (all_resolved(collected, expected_ids)) {
-      break
+    err <- tryCatch(state$proc$read_error(), error = function(e) "")
+    if (nzchar(err)) {
+      message("forge.editor languageserver stderr: ", trimws(err))
     }
-    if (Sys.time() > deadline) {
-      break
+    if (state$alive) {
+      later::later(pump, delay = PUMP_INTERVAL)
     }
-    Sys.sleep(0.01)
+    invisible(NULL)
   }
+  later::later(pump, delay = PUMP_INTERVAL)
 
-  # Remove resolved ids from the pending set.
-  resolved <- vapply(
-    collected,
-    function(m) {
-      id <- m[["id"]]
-      if (is.null(id)) "" else as.character(id)
-    },
-    character(1)
-  )
-  state$pending_ids <- setdiff(state$pending_ids, resolved)
-
-  # Drain stderr without blocking so it doesn't fill up.
-  err <- tryCatch(state$proc$read_error(), error = function(e) "")
-  if (nzchar(err)) {
-    message("forge.editor languageserver stderr: ", trimws(err))
-  }
-
-  collected
+  bridges[[element_id]] <- list(state = state, obs = obs)
+  invisible(element_id)
 }
 
-all_resolved <- function(collected, expected_ids) {
-  if (length(expected_ids) == 0) {
-    return(TRUE)
-  }
-  ids <- vapply(
-    collected,
-    function(m) {
-      id <- m[["id"]]
-      if (is.null(id)) "" else as.character(id)
-    },
-    character(1)
-  )
-  all(expected_ids %in% ids)
-}
-
-write_lsp_frame <- function(proc, msg) {
-  json <- jsonlite::toJSON(msg, auto_unbox = TRUE, null = "null")
-  payload <- charToRaw(json)
-  header <- charToRaw(sprintf("Content-Length: %d\r\n\r\n", length(payload)))
-  proc$write_input(c(header, payload))
-}
-
-# Parse out every complete LSP frame currently in `state$stdout_buf`, leaving
-# any trailing partial frame behind for the next call.
-drain_frames <- function(state) {
-  results <- list()
-  buf <- state$stdout_buf
+# Parse out every complete LSP frame currently in `state$buf` and return the
+# raw JSON body of each (as a UTF-8 character scalar), leaving any trailing
+# partial frame behind for the next call. Returning the body verbatim avoids
+# a lossy `fromJSON`/`toJSON` round-trip — numeric scalars stay scalar and
+# explicit `null` fields are preserved.
+drain_frame_strings <- function(state) {
+  results <- character(0)
+  buf <- state$buf
   repeat {
     hdr_end <- find_header_end(buf)
     if (is.na(hdr_end)) {
@@ -201,27 +225,25 @@ drain_frames <- function(state) {
     header <- rawToChar(buf[seq_len(hdr_end - 4)])
     len <- parse_content_length(header)
     if (is.na(len)) {
-      # Malformed header; drop it to recover.
+      # Malformed header; drop it to resync.
       buf <- buf[-seq_len(hdr_end)]
       next
     }
     if (length(buf) < hdr_end + len) {
       break
     }
-    body <- rawToChar(buf[(hdr_end + 1):(hdr_end + len)])
+    body_raw <- buf[(hdr_end + 1):(hdr_end + len)]
     buf <- buf[-seq_len(hdr_end + len)]
-    parsed <- tryCatch(
-      jsonlite::fromJSON(body, simplifyVector = FALSE),
-      error = function(e) NULL
-    )
-    if (!is.null(parsed)) results[[length(results) + 1]] <- parsed
+    body <- rawToChar(body_raw)
+    Encoding(body) <- "UTF-8"
+    results <- c(results, body)
   }
-  state$stdout_buf <- buf
+  state$buf <- buf
   results
 }
 
-# Find the index of the last byte of the `\r\n\r\n` separator in `buf`, or NA
-# if the separator hasn't fully arrived yet.
+# Index of the last byte of the `\r\n\r\n` separator in `buf`, or NA if the
+# separator hasn't fully arrived yet.
 find_header_end <- function(buf) {
   if (length(buf) < 4) {
     return(NA_integer_)

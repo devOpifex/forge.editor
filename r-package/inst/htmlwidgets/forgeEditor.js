@@ -8,7 +8,6 @@ HTMLWidgets.widget({
 
     return {
       renderValue: function(x) {
-        console.log(x);
         if (!window.ForgeEditor || typeof window.ForgeEditor.mount !== "function") {
           el.textContent = "forge.editor: JS bundle not loaded.";
           return;
@@ -28,7 +27,19 @@ HTMLWidgets.widget({
           readOnly: !!x.readOnly
         };
         if (x.catalog) opts.catalog = x.catalog;
-        if (x.lsp && x.lsp.url) opts.lsp = x.lsp;
+
+        // The R side ships `x.lsp` as `{ enabled: true, ... }` whenever the
+        // Shiny session has installed the init observer. The JS-side
+        // `ShinyTransport` defaults `elementId` to `el.id`, so multiple
+        // editors in one app each get their own per-id send/recv channels.
+        if (x.lsp && x.lsp.enabled) {
+          var lspOpts = {};
+          if (x.lsp.rootUri) lspOpts.rootUri = x.lsp.rootUri;
+          if (x.lsp.documentUri) lspOpts.documentUri = x.lsp.documentUri;
+          if (x.lsp.languageId) lspOpts.languageId = x.lsp.languageId;
+          if (x.lsp.elementId) lspOpts.elementId = x.lsp.elementId;
+          opts.lsp = lspOpts;
+        }
 
         instance = window.ForgeEditor.mount(el, opts);
         lastValue = opts.value;

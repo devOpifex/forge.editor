@@ -15,8 +15,12 @@ export type Catalog = Record<string, CompletionItem[]>;
 
 /** LSP-backed completion / hover / diagnostics options. */
 export interface LSPOptions {
-  /** URL of the JSON-RPC-over-HTTP endpoint that bridges to the language server. */
-  url: string;
+  /**
+   * DOM id used to namespace the Shiny WebSocket channels
+   * (`${elementId}_lsp_send` / `${elementId}_lsp_recv`). Must be unique
+   * per editor on the page. Defaults to the mount element's `id` attribute.
+   */
+  elementId?: string;
   /** Workspace root URI advertised in the `initialize` request. */
   rootUri?: string;
   /** Per-document URI used for `textDocument/didOpen`. Defaults to `file:///__forge__.R`. */
