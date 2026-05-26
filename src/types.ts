@@ -23,8 +23,6 @@ export interface LSPOptions {
   documentUri?: string;
   /** Language id used for `textDocument/didOpen`. Defaults to `"r"`. */
   languageId?: string;
-  /** Interval (ms) for draining queued server-pushed notifications. Defaults to 1500. */
-  pollIntervalMs?: number;
 }
 
 /** Options accepted by {@link mount}. */

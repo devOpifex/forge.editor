@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { HttpTransport } from "../src/lsp/http-transport";
 
 interface FetchCall {
@@ -22,13 +22,6 @@ function makeFetch(responder: (call: FetchCall) => unknown) {
 }
 
 describe("HttpTransport", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   it("POSTs each send as a single-element JSON array and dispatches the response", async () => {
     const { fn, calls } = makeFetch(({ body }) => {
       const arr = JSON.parse(body) as unknown[];
@@ -36,7 +29,7 @@ describe("HttpTransport", () => {
       const req = arr[0] as { id: number };
       return [{ jsonrpc: "2.0", id: req.id, result: { ok: true } }];
     });
-    const t = new HttpTransport({ url: "/lsp", fetch: fn, pollIntervalMs: 10_000 });
+    const t = new HttpTransport({ url: "/lsp", fetch: fn });
 
     const received: string[] = [];
     t.subscribe((msg) => received.push(msg));
@@ -55,34 +48,20 @@ describe("HttpTransport", () => {
     t.dispose();
   });
 
-  it("polls with an empty array on the configured interval while subscribers exist", async () => {
-    const { fn, calls } = makeFetch(() => []);
-    const t = new HttpTransport({ url: "/lsp", fetch: fn, pollIntervalMs: 100 });
+  it("does not poll the endpoint when idle", async () => {
+    vi.useFakeTimers();
+    try {
+      const { fn, calls } = makeFetch(() => []);
+      const t = new HttpTransport({ url: "/lsp", fetch: fn });
 
-    const handler = vi.fn();
-    t.subscribe(handler);
+      t.subscribe(() => {});
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(calls.length).toBe(0);
 
-    await vi.advanceTimersByTimeAsync(250);
-
-    const polls = calls.filter((c) => c.body === "[]");
-    expect(polls.length).toBeGreaterThanOrEqual(2);
-
-    t.dispose();
-  });
-
-  it("stops polling once the last subscriber unsubscribes", async () => {
-    const { fn, calls } = makeFetch(() => []);
-    const t = new HttpTransport({ url: "/lsp", fetch: fn, pollIntervalMs: 50 });
-
-    const handler = () => {};
-    t.subscribe(handler);
-    await vi.advanceTimersByTimeAsync(120);
-    const before = calls.length;
-    t.unsubscribe(handler);
-    await vi.advanceTimersByTimeAsync(200);
-    expect(calls.length).toBe(before);
-
-    t.dispose();
+      t.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("dispatches multiple messages from one response in order", async () => {
@@ -94,7 +73,7 @@ describe("HttpTransport", () => {
         { jsonrpc: "2.0", method: "textDocument/publishDiagnostics", params: { uri: "x" } },
       ];
     });
-    const t = new HttpTransport({ url: "/lsp", fetch: fn, pollIntervalMs: 10_000 });
+    const t = new HttpTransport({ url: "/lsp", fetch: fn });
 
     const received: string[] = [];
     t.subscribe((m) => received.push(m));
@@ -115,10 +94,27 @@ describe("HttpTransport", () => {
     expect(() => t.send("{}")).toThrow(/disposed/i);
   });
 
+  it("swallows errors silently once disposed (no console noise after teardown)", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const slow = vi.fn(
+      () =>
+        new Promise<Response>((_resolve, reject) => {
+          setTimeout(() => reject(new TypeError("NetworkError")), 5);
+        })
+    ) as unknown as typeof fetch;
+    const t = new HttpTransport({ url: "/lsp", fetch: slow });
+    t.subscribe(() => {});
+    t.send("{}");
+    t.dispose();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(consoleError).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
   it("refuses to dispatch when the response is not a JSON array", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const fn = vi.fn(async () => new Response("{\"oops\":true}", { status: 200 })) as unknown as typeof fetch;
-    const t = new HttpTransport({ url: "/lsp", fetch: fn, pollIntervalMs: 10_000 });
+    const t = new HttpTransport({ url: "/lsp", fetch: fn });
 
     const handler = vi.fn();
     t.subscribe(handler);

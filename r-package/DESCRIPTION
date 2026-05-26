@@ -8,11 +8,10 @@ Description: An htmlwidget that embeds the forge.editor JavaScript library
     applications. Supports static-catalog autocomplete out of the box and
     optional live LSP-backed completion, hover, and diagnostics via R's
     'languageserver' package when used inside a Shiny session.
-License: ISC
+License: MIT + file LICENSE
 Encoding: UTF-8
 Imports:
     htmlwidgets,
-    htmltools,
     shiny,
     jsonlite,
     processx

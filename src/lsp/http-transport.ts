@@ -4,8 +4,6 @@ import type { Transport } from "@codemirror/lsp-client";
 export interface HttpTransportOptions {
   /** Endpoint URL that accepts a JSON array of JSON-RPC messages and returns the same. */
   url: string;
-  /** Interval (ms) at which to poll for queued server notifications. Defaults to 1500. */
-  pollIntervalMs?: number;
   /** Optional `fetch` implementation, primarily for tests. */
   fetch?: typeof fetch;
 }
@@ -14,23 +12,22 @@ export interface HttpTransportOptions {
  * `Transport` implementation that tunnels JSON-RPC over HTTP/1.1.
  *
  * Each {@link send} POSTs a one-element JSON array. The endpoint returns a JSON
- * array of zero or more messages (the response, plus any queued server-pushed
- * notifications such as diagnostics) which are dispatched to subscribers in
- * order. While at least one subscriber is registered the transport also drains
- * pending notifications on a fixed interval by POSTing an empty array.
+ * array of zero or more messages — the response, plus any queued server-pushed
+ * notifications (e.g. `textDocument/publishDiagnostics`) — which are dispatched
+ * to subscribers in order. The transport is purely request-driven: it never
+ * polls. Diagnostics therefore piggy-back on the next outgoing message
+ * (typically the user's next `didChange` or completion request), which is
+ * fine while editing and avoids hammering the endpoint when idle.
  */
 export class HttpTransport implements Transport {
   private readonly url: string;
-  private readonly pollIntervalMs: number;
   private readonly fetchImpl: typeof fetch;
   private handlers: Array<(value: string) => void> = [];
-  private pollTimer: ReturnType<typeof setInterval> | null = null;
   private inFlight = new Set<AbortController>();
   private disposed = false;
 
   constructor(opts: HttpTransportOptions) {
     this.url = opts.url;
-    this.pollIntervalMs = opts.pollIntervalMs ?? 1500;
     this.fetchImpl = opts.fetch ?? globalThis.fetch.bind(globalThis);
   }
 
@@ -41,38 +38,22 @@ export class HttpTransport implements Transport {
 
   subscribe(handler: (value: string) => void): void {
     this.handlers.push(handler);
-    this.ensurePolling();
   }
 
   unsubscribe(handler: (value: string) => void): void {
     this.handlers = this.handlers.filter((h) => h !== handler);
-    if (this.handlers.length === 0) this.stopPolling();
   }
 
-  /** Stop polling, abort in-flight requests, and refuse further sends. */
+  /** Abort in-flight requests and refuse further sends. */
   dispose(): void {
     this.disposed = true;
-    this.stopPolling();
     for (const ctrl of this.inFlight) ctrl.abort();
     this.inFlight.clear();
     this.handlers = [];
   }
 
-  private ensurePolling(): void {
-    if (this.pollTimer !== null) return;
-    this.pollTimer = setInterval(() => {
-      void this.post("[]");
-    }, this.pollIntervalMs);
-  }
-
-  private stopPolling(): void {
-    if (this.pollTimer !== null) {
-      clearInterval(this.pollTimer);
-      this.pollTimer = null;
-    }
-  }
-
   private async post(body: string): Promise<void> {
+    if (this.disposed) return;
     const ctrl = new AbortController();
     this.inFlight.add(ctrl);
     try {
@@ -103,6 +84,7 @@ export class HttpTransport implements Transport {
       }
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
+      if (this.disposed) return;
       console.error("[forge.editor] LSP transport error:", err);
     } finally {
       this.inFlight.delete(ctrl);

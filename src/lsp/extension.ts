@@ -15,10 +15,7 @@ export interface LSPWiring {
  * function that should be called when the editor is destroyed.
  */
 export function lspExtensions(opts: LSPOptions): LSPWiring {
-  const transport = new HttpTransport({
-    url: opts.url,
-    pollIntervalMs: opts.pollIntervalMs,
-  });
+  const transport = new HttpTransport({ url: opts.url });
 
   const client = new LSPClient({
     rootUri: opts.rootUri,
