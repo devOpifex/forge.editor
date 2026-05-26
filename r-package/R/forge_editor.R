@@ -20,14 +20,16 @@
 #' @param elementId Optional explicit DOM id for the widget container.
 #'
 #' @export
-forge_editor <- function(value = "",
-                         theme = c("light", "dark"),
-                         readOnly = FALSE,
-                         catalog = NULL,
-                         lsp = FALSE,
-                         width = NULL,
-                         height = NULL,
-                         elementId = NULL) {
+forge_editor <- function(
+  value = "",
+  theme = c("light", "dark"),
+  readOnly = FALSE,
+  catalog = NULL,
+  lsp = FALSE,
+  width = NULL,
+  height = NULL,
+  elementId = NULL
+) {
   theme <- match.arg(theme)
 
   x <- list(
@@ -35,7 +37,9 @@ forge_editor <- function(value = "",
     theme = theme,
     readOnly = isTRUE(readOnly)
   )
-  if (!is.null(catalog)) x$catalog <- catalog
+  if (!is.null(catalog)) {
+    x$catalog <- catalog
+  }
 
   lsp_opts <- resolve_lsp_options(lsp)
   if (!is.null(lsp_opts)) {
@@ -46,7 +50,8 @@ forge_editor <- function(value = "",
         error = function(e) {
           warning(
             "forge.editor: failed to start LSP bridge (",
-            conditionMessage(e), "); falling back to static catalog.",
+            conditionMessage(e),
+            "); falling back to static catalog.",
             call. = FALSE
           )
           NULL
@@ -82,7 +87,11 @@ forge_editor <- function(value = "",
 #' @export
 forgeEditorOutput <- function(outputId, width = "100%", height = "400px") {
   htmlwidgets::shinyWidgetOutput(
-    outputId, "forgeEditor", width, height, package = "forge.editor"
+    outputId,
+    "forgeEditor",
+    width,
+    height,
+    package = "forge.editor"
   )
 }
 
@@ -92,13 +101,21 @@ forgeEditorOutput <- function(outputId, width = "100%", height = "400px") {
 #' @param quoted Whether `expr` is already quoted.
 #' @export
 renderForgeEditor <- function(expr, env = parent.frame(), quoted = FALSE) {
-  if (!quoted) expr <- substitute(expr)
+  if (!quoted) {
+    expr <- substitute(expr)
+  }
   htmlwidgets::shinyRenderWidget(expr, forgeEditorOutput, env, quoted = TRUE)
 }
 
 resolve_lsp_options <- function(lsp) {
-  if (isFALSE(lsp) || is.null(lsp)) return(NULL)
-  if (isTRUE(lsp)) return(list())
-  if (is.list(lsp)) return(lsp)
+  if (isFALSE(lsp) || is.null(lsp)) {
+    return(NULL)
+  }
+  if (isTRUE(lsp)) {
+    return(list())
+  }
+  if (is.list(lsp)) {
+    return(lsp)
+  }
   stop("`lsp` must be TRUE, FALSE, or a named list.", call. = FALSE)
 }
