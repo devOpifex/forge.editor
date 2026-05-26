@@ -4,6 +4,7 @@ const el = document.getElementById("editor");
 if (!el) throw new Error("#editor not found");
 
 const ed = mount(el, {
+  theme: "dark",
   value: [
     "library(dplyr)",
     "",

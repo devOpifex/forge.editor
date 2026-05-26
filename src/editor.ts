@@ -5,6 +5,7 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { rLanguage } from "./r-language";
 import { rHoverTooltip } from "./hover";
 import { defaultCatalog } from "./catalog";
+import { lspExtensions } from "./lsp/extension";
 import type { Catalog, EditorInstance, MountOptions } from "./types";
 
 const forgeTheme = EditorView.baseTheme({
@@ -33,6 +34,12 @@ export function createEditor(parent: HTMLElement, opts: MountOptions = {}): Edit
   if (opts.readOnly) extensions.push(EditorState.readOnly.of(true));
   if (opts.theme === "dark") extensions.push(oneDark);
 
+  let lspWiring: ReturnType<typeof lspExtensions> | null = null;
+  if (opts.lsp) {
+    lspWiring = lspExtensions(opts.lsp);
+    extensions.push(lspWiring.extension);
+  }
+
   const view = new EditorView({
     parent,
     state: EditorState.create({ doc: opts.value ?? "", extensions }),
@@ -50,6 +57,9 @@ export function createEditor(parent: HTMLElement, opts: MountOptions = {}): Edit
       return () => listeners.delete(cb);
     },
     focus: () => view.focus(),
-    destroy: () => view.destroy(),
+    destroy: () => {
+      view.destroy();
+      if (lspWiring) lspWiring.dispose();
+    },
   };
 }

@@ -13,6 +13,20 @@ export interface CompletionItem {
 /** Autocomplete metadata keyed by package name. */
 export type Catalog = Record<string, CompletionItem[]>;
 
+/** LSP-backed completion / hover / diagnostics options. */
+export interface LSPOptions {
+  /** URL of the JSON-RPC-over-HTTP endpoint that bridges to the language server. */
+  url: string;
+  /** Workspace root URI advertised in the `initialize` request. */
+  rootUri?: string;
+  /** Per-document URI used for `textDocument/didOpen`. Defaults to `file:///__forge__.R`. */
+  documentUri?: string;
+  /** Language id used for `textDocument/didOpen`. Defaults to `"r"`. */
+  languageId?: string;
+  /** Interval (ms) for draining queued server-pushed notifications. Defaults to 1500. */
+  pollIntervalMs?: number;
+}
+
 /** Options accepted by {@link mount}. */
 export interface MountOptions {
   /** Initial code to load into the editor. */
@@ -25,6 +39,8 @@ export interface MountOptions {
   theme?: "light" | "dark";
   /** Convenience callback fired whenever the document changes. */
   onChange?: (code: string) => void;
+  /** Wire the editor to a language server. When omitted, only the static catalog is used. */
+  lsp?: LSPOptions;
 }
 
 /** Handle returned by {@link mount} for driving the editor from the host. */

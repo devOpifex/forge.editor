@@ -17,7 +17,9 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && vite build --config vite.config.iife.ts",
+    "build:esm": "vite build",
+    "build:r": "vite build --config vite.config.iife.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "gen:catalog": "Rscript tools/extract-metadata.R"
@@ -35,6 +37,7 @@
     "@codemirror/commands": "^6.6.0",
     "@codemirror/language": "^6.10.0",
     "@codemirror/legacy-modes": "^6.4.0",
+    "@codemirror/lsp-client": "^6.2.4",
     "@codemirror/state": "^6.4.0",
     "@codemirror/theme-one-dark": "^6.1.0",
     "@codemirror/view": "^6.26.0",

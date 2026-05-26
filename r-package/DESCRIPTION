@@ -1,0 +1,21 @@
+Package: forge.editor
+Type: Package
+Title: In-Browser R Code Editor (CodeMirror 6) for Shiny
+Version: 0.1.0
+Authors@R: person("John", "Coene", email = "jcoenep@gmail.com", role = c("aut", "cre"))
+Description: An htmlwidget that embeds the forge.editor JavaScript library
+    (a CodeMirror 6-based R code editor) in R, RStudio Viewer, and Shiny
+    applications. Supports static-catalog autocomplete out of the box and
+    optional live LSP-backed completion, hover, and diagnostics via R's
+    'languageserver' package when used inside a Shiny session.
+License: ISC
+Encoding: UTF-8
+Imports:
+    htmlwidgets,
+    htmltools,
+    shiny,
+    jsonlite,
+    processx
+Suggests:
+    languageserver
+Config/roxygen2/version: 8.0.0

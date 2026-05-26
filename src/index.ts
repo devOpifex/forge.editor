@@ -1,7 +1,7 @@
 import { createEditor } from "./editor";
 import type { EditorInstance, MountOptions } from "./types";
 
-export type { Catalog, CompletionItem, EditorInstance, MountOptions } from "./types";
+export type { Catalog, CompletionItem, EditorInstance, LSPOptions, MountOptions } from "./types";
 export { defaultCatalog, mergeCatalogs } from "./catalog";
 
 /**
