@@ -69,6 +69,45 @@ Rscript tools/extract-metadata.R --out custom.json pkgA pkgB
 Requires R with the target packages and `jsonlite` installed. The format also
 allows hand-authoring entries for internal packages.
 
+## Inline `<select>` decorations
+
+The editor can render an interactive `<select>` widget at every match of a
+regex you provide. Picking an option rewrites the matched range in the
+document; as long as the pattern still matches the new value, the widget
+reappears with the new selection.
+
+```ts
+import { mount, type SelectDecorationSpec } from "forge.editor";
+
+const colorPicker: SelectDecorationSpec = {
+  pattern: /"(red|green|blue)"/,                  // `g` flag added if missing
+  options: (match) => [                           // called per match
+    { value: '"red"',   label: "red" },
+    { value: '"green"', label: "green" },
+    { value: '"blue"',  label: "blue" },
+  ],
+};
+
+const ed = mount(el, {
+  value: 'color <- "red"',
+  decorations: [colorPicker],
+});
+
+// Swap (or clear) the active spec list at runtime:
+ed.setDecorations([colorPicker, otherSpec]);
+ed.setDecorations([]);                            // clear all
+```
+
+- `pattern` is matched against the full document text. The match's text is
+  pre-selected if it equals one of the option `value`s; otherwise the first
+  option wins.
+- `options` is called with the `RegExpExecArray` for each match, so callbacks
+  can vary the option list per match (e.g. via capture groups).
+- Options may be plain strings (`"red"`, used as both value and label) or
+  `{ value, label }` objects.
+- When two patterns would match overlapping ranges, the spec listed first
+  wins.
+
 ## Out of scope (for now)
 
 Linting/diagnostics, auto-formatting, signature help, and live R-backed
