@@ -1,0 +1,125 @@
+import { afterEach, describe, expect, it } from "vitest";
+import { EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
+import { selectDecorations, type SelectDecorationSpec } from "../src/decorations";
+
+let view: EditorView | null = null;
+let parent: HTMLElement | null = null;
+
+afterEach(() => {
+  view?.destroy();
+  parent?.remove();
+  view = null;
+  parent = null;
+});
+
+function setup(doc: string, specs: SelectDecorationSpec[]): EditorView {
+  parent = document.createElement("div");
+  document.body.appendChild(parent);
+  view = new EditorView({
+    parent,
+    state: EditorState.create({ doc, extensions: [selectDecorations(specs)] }),
+  });
+  return view;
+}
+
+const colorSpec: SelectDecorationSpec = {
+  pattern: /"(red|green|blue)"/,
+  options: () => [
+    { value: '"red"', label: "red" },
+    { value: '"green"', label: "green" },
+    { value: '"blue"', label: "blue" },
+  ],
+};
+
+describe("selectDecorations", () => {
+  it("renders a <select> at a pattern match", () => {
+    const v = setup('color <- "red"', [colorSpec]);
+    const selects = v.dom.querySelectorAll("select.cm-forge-select");
+    expect(selects).toHaveLength(1);
+  });
+
+  it("pre-selects the option matching the matched text", () => {
+    const v = setup('color <- "green"', [colorSpec]);
+    const select = v.dom.querySelector("select.cm-forge-select") as HTMLSelectElement;
+    expect(select.value).toBe('"green"');
+  });
+
+  it("falls back to the first option when no option matches", () => {
+    const spec: SelectDecorationSpec = {
+      pattern: /__PICK__/,
+      options: () => [
+        { value: "a", label: "A" },
+        { value: "b", label: "B" },
+      ],
+    };
+    const v = setup("__PICK__", [spec]);
+    const select = v.dom.querySelector("select.cm-forge-select") as HTMLSelectElement;
+    expect(select.value).toBe("a");
+  });
+
+  it("accepts plain-string options (value === label)", () => {
+    const spec: SelectDecorationSpec = {
+      pattern: /\bX\b/,
+      options: () => ["X", "Y", "Z"],
+    };
+    const v = setup("X", [spec]);
+    const select = v.dom.querySelector("select.cm-forge-select") as HTMLSelectElement;
+    expect(select.value).toBe("X");
+    expect(select.options).toHaveLength(3);
+  });
+
+  it("rewrites the matched range when an option is picked", () => {
+    const v = setup('color <- "red"', [colorSpec]);
+    const select = v.dom.querySelector("select.cm-forge-select") as HTMLSelectElement;
+    select.value = '"blue"';
+    select.dispatchEvent(new Event("change"));
+    expect(v.state.doc.toString()).toBe('color <- "blue"');
+  });
+
+  it("keeps decorations live after the document is edited around them", () => {
+    const v = setup('color <- "red"', [colorSpec]);
+    v.dispatch({ changes: { from: 0, insert: "# comment\n" } });
+    const selects = v.dom.querySelectorAll("select.cm-forge-select");
+    expect(selects).toHaveLength(1);
+    const select = selects[0] as HTMLSelectElement;
+    select.value = '"green"';
+    select.dispatchEvent(new Event("change"));
+    expect(v.state.doc.toString()).toBe('# comment\ncolor <- "green"');
+  });
+
+  it("renders independent widgets for two disjoint specs", () => {
+    const tagSpec: SelectDecorationSpec = {
+      pattern: /@\w+@/,
+      options: () => ["@x@", "@y@"],
+    };
+    const v = setup('color <- "red"; sym <- @x@', [colorSpec, tagSpec]);
+    const selects = v.dom.querySelectorAll("select.cm-forge-select");
+    expect(selects).toHaveLength(2);
+  });
+
+  it("first spec wins on overlapping ranges", () => {
+    const outer: SelectDecorationSpec = {
+      pattern: /AB/,
+      options: () => ["AB", "CD"],
+    };
+    const inner: SelectDecorationSpec = {
+      pattern: /B/,
+      options: () => ["B", "X"],
+    };
+    const v = setup("AB", [outer, inner]);
+    const selects = v.dom.querySelectorAll("select.cm-forge-select");
+    expect(selects).toHaveLength(1);
+    expect((selects[0] as HTMLSelectElement).value).toBe("AB");
+  });
+
+  it("adds the global flag to non-global patterns so every match is decorated", () => {
+    const spec: SelectDecorationSpec = {
+      pattern: /\bX\b/,
+      options: () => ["X", "Y"],
+    };
+    const v = setup("X X X", [spec]);
+    const selects = v.dom.querySelectorAll("select.cm-forge-select");
+    expect(selects).toHaveLength(3);
+  });
+});

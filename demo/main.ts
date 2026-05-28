@@ -8,10 +8,22 @@ const ed = mount(el, {
   value: [
     "library(dplyr)",
     "",
+    'color <- "red"',
+    "",
     "mtcars |>",
     "  filter(mpg > 20) |>",
     "  ",
   ].join("\n"),
+  decorations: [
+    {
+      pattern: /"(red|green|blue)"/,
+      options: () => [
+        { value: '"red"', label: "red" },
+        { value: '"green"', label: "green" },
+        { value: '"blue"', label: "blue" },
+      ],
+    },
+  ],
   onChange: (code) => console.log(`change: ${code.length} chars`),
 });
 

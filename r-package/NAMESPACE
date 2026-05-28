@@ -1,3 +1,4 @@
+export(forge_decoration)
 export(forge_editor)
 export(forgeEditorOutput)
 export(renderForgeEditor)

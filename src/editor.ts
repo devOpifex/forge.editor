@@ -1,4 +1,4 @@
-import { EditorState } from "@codemirror/state";
+import { Compartment, EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -6,12 +6,19 @@ import { rLanguage } from "./r-language";
 import { rHoverTooltip } from "./hover";
 import { defaultCatalog } from "./catalog";
 import { lspExtensions } from "./lsp/extension";
+import { selectDecorations, type SelectDecorationSpec } from "./decorations";
 import type { Catalog, EditorInstance, MountOptions } from "./types";
 
 const forgeTheme = EditorView.baseTheme({
   ".cm-forge-info": { padding: "2px 0", maxWidth: "32rem" },
   ".cm-forge-sig": { fontFamily: "monospace", fontWeight: "bold", marginBottom: "2px" },
   ".cm-forge-doc": { fontSize: "90%", opacity: "0.85", whiteSpace: "normal" },
+  ".cm-forge-select": {
+    font: "inherit",
+    padding: "0 1px",
+    margin: "0",
+    verticalAlign: "baseline",
+  },
 });
 
 /** Construct a CodeMirror editor and return the host-facing handle. */
@@ -33,6 +40,13 @@ export function createEditor(parent: HTMLElement, opts: MountOptions = {}): Edit
   ];
   if (opts.readOnly) extensions.push(EditorState.readOnly.of(true));
   if (opts.theme === "dark") extensions.push(oneDark);
+
+  const decorationsCompartment = new Compartment();
+  extensions.push(
+    decorationsCompartment.of(
+      opts.decorations?.length ? selectDecorations(opts.decorations) : [],
+    ),
+  );
 
   let lspWiring: ReturnType<typeof lspExtensions> | null = null;
   if (opts.lsp) {
@@ -68,6 +82,13 @@ export function createEditor(parent: HTMLElement, opts: MountOptions = {}): Edit
     onChange: (cb) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
+    },
+    setDecorations: (specs: ReadonlyArray<SelectDecorationSpec>) => {
+      view.dispatch({
+        effects: decorationsCompartment.reconfigure(
+          specs.length ? selectDecorations(specs) : [],
+        ),
+      });
     },
     focus: () => view.focus(),
     destroy: () => {

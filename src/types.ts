@@ -1,3 +1,5 @@
+import type { SelectDecorationSpec } from "./decorations";
+
 /** A single autocomplete / hover entry exported by an R package. */
 export interface CompletionItem {
   /** Symbol name, e.g. `filter`. */
@@ -43,6 +45,8 @@ export interface MountOptions {
   onChange?: (code: string) => void;
   /** Wire the editor to a language server. When omitted, only the static catalog is used. */
   lsp?: LSPOptions;
+  /** Inline `<select>` widget decorations driven by regex patterns. */
+  decorations?: SelectDecorationSpec[];
 }
 
 /** Handle returned by {@link mount} for driving the editor from the host. */
@@ -53,6 +57,8 @@ export interface EditorInstance {
   setValue(code: string): void;
   /** Subscribe to document changes. Returns an unsubscribe function. */
   onChange(cb: (code: string) => void): () => void;
+  /** Replace the active inline `<select>` decoration specs. Pass `[]` to clear. */
+  setDecorations(specs: ReadonlyArray<SelectDecorationSpec>): void;
   /** Move keyboard focus into the editor. */
   focus(): void;
   /** Tear down the editor and free resources. */

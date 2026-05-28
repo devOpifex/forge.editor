@@ -10,6 +10,7 @@ forge_editor(
   readOnly = FALSE,
   catalog = NULL,
   lsp = FALSE,
+  decorations = NULL,
   width = NULL,
   height = NULL,
   elementId = NULL
@@ -28,17 +29,26 @@ Overrides the bundled default catalog.}
 
 \item{lsp}{Either `FALSE` (default), `TRUE`, or a named list of LSP
 options forwarded to the JS client (`rootUri`, `documentUri`,
-`languageId`, `pollIntervalMs`). Only honoured inside Shiny.}
+`languageId`). Only honoured inside Shiny.}
+
+\item{decorations}{Optional list of inline `<select>` widget specs. Each
+entry is most easily built with [forge_decoration()]; see that function
+for the expected shape. The same specs can also be applied from JS at
+runtime via the widget instance's `setDecorations` method.}
 
 \item{width, height}{Widget dimensions, passed through to htmlwidgets.}
 
-\item{elementId}{Optional explicit DOM id for the widget container.}
+\item{elementId}{Optional explicit DOM id for the widget container. When
+`lsp` is enabled, the same id is used to namespace the Shiny
+input/custom-message channels, so each editor on the page gets its own
+`languageserver` subprocess.}
 }
 \description{
 Creates an htmlwidget hosting the forge.editor CodeMirror 6 instance.
 When called inside a Shiny session with `lsp = TRUE`, a per-session
-R `languageserver` subprocess is spawned and exposed as a JSON-RPC over
-HTTP endpoint so the editor can request real completion, hover, and
-diagnostic information. Outside Shiny (or when `languageserver` is not
-installed) the editor falls back silently to the bundled static catalog.
+R `languageserver` subprocess is spawned the first time each editor
+connects, and JSON-RPC traffic is tunnelled over the existing Shiny
+WebSocket (no extra HTTP endpoint, no polling). Outside Shiny (or when
+`languageserver` is not installed) the editor falls back silently to
+the bundled static catalog.
 }
