@@ -11,12 +11,21 @@ import {
 /** One `<option>` for a {@link SelectDecorationSpec}; a bare string is used as both value and label. */
 export type SelectOption = string | { value: string; label?: string };
 
+/** Options for a match, resolved synchronously or asynchronously (e.g. via `fetch()`). */
+export type SelectOptionsResult =
+  | ReadonlyArray<SelectOption>
+  | Promise<ReadonlyArray<SelectOption>>;
+
 /** Configuration for one inline `<select>` decoration. */
 export interface SelectDecorationSpec {
   /** Regex matched against the document text. The `g` flag is added automatically if missing. */
   pattern: RegExp;
-  /** Returns the `<option>`s for a given match. */
-  options: (match: RegExpExecArray) => ReadonlyArray<SelectOption>;
+  /**
+   * Returns the `<option>`s for a given match. May return a Promise (e.g. from `fetch()`); while it
+   * resolves, the widget shows the matched text and is disabled, then fills in once the options
+   * arrive. Called when the widget first mounts and whenever the matched value changes.
+   */
+  options: (match: RegExpExecArray) => SelectOptionsResult;
 }
 
 interface NormalizedSpec {
@@ -61,20 +70,46 @@ class SelectWidget extends WidgetType {
     const select = document.createElement("select");
     select.className = "cm-forge-select";
 
-    const options = this.spec.options(this.match).map(normalizeOption);
-    let matched = false;
-    for (const o of options) {
-      const optEl = document.createElement("option");
-      optEl.value = o.value;
-      optEl.textContent = o.label;
-      if (!matched && o.value === this.value) {
-        optEl.selected = true;
-        matched = true;
+    const fill = (raw: ReadonlyArray<SelectOption>) => {
+      const options = raw.map(normalizeOption);
+      select.replaceChildren();
+      let matched = false;
+      for (const o of options) {
+        const optEl = document.createElement("option");
+        optEl.value = o.value;
+        optEl.textContent = o.label;
+        if (!matched && o.value === this.value) {
+          optEl.selected = true;
+          matched = true;
+        }
+        select.appendChild(optEl);
       }
-      select.appendChild(optEl);
-    }
-    if (!matched && select.firstElementChild) {
-      (select.firstElementChild as HTMLOptionElement).selected = true;
+      if (!matched && select.firstElementChild) {
+        (select.firstElementChild as HTMLOptionElement).selected = true;
+      }
+    };
+
+    const result = this.spec.options(this.match);
+    if (result instanceof Promise) {
+      // Show the matched text and lock the control until the options arrive.
+      const pending = document.createElement("option");
+      pending.value = this.value;
+      pending.textContent = this.value;
+      pending.selected = true;
+      select.appendChild(pending);
+      select.disabled = true;
+      result.then(
+        (options) => {
+          select.disabled = false;
+          fill(options);
+        },
+        () => {
+          // Leave the matched text in place but re-enable so the user isn't stuck.
+          select.disabled = false;
+        },
+      );
+    } else {
+      fill(result);
     }
 
     select.addEventListener("change", () => {

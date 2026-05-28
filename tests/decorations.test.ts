@@ -113,6 +113,38 @@ describe("selectDecorations", () => {
     expect((selects[0] as HTMLSelectElement).value).toBe("AB");
   });
 
+  it("shows the matched text disabled while async options load, then fills in", async () => {
+    let resolve!: (opts: string[]) => void;
+    const spec: SelectDecorationSpec = {
+      pattern: /"(red|green|blue)"/,
+      options: () => new Promise<string[]>((r) => (resolve = r)),
+    };
+    const v = setup('color <- "green"', [spec]);
+    const select = v.dom.querySelector("select.cm-forge-select") as HTMLSelectElement;
+    // Placeholder reflects the matched text and is locked until resolution.
+    expect(select.disabled).toBe(true);
+    expect(select.value).toBe('"green"');
+    expect(select.options).toHaveLength(1);
+
+    resolve(['"red"', '"green"', '"blue"']);
+    await Promise.resolve();
+    expect(select.disabled).toBe(false);
+    expect(select.options).toHaveLength(3);
+    expect(select.value).toBe('"green"');
+  });
+
+  it("re-enables the select if the async options reject", async () => {
+    const spec: SelectDecorationSpec = {
+      pattern: /\bX\b/,
+      options: () => Promise.reject(new Error("nope")),
+    };
+    const v = setup("X", [spec]);
+    const select = v.dom.querySelector("select.cm-forge-select") as HTMLSelectElement;
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(select.disabled).toBe(false);
+  });
+
   it("adds the global flag to non-global patterns so every match is decorated", () => {
     const spec: SelectDecorationSpec = {
       pattern: /\bX\b/,

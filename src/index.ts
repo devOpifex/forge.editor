@@ -2,7 +2,7 @@ import { createEditor } from "./editor";
 import type { EditorInstance, MountOptions } from "./types";
 
 export type { Catalog, CompletionItem, EditorInstance, LSPOptions, MountOptions } from "./types";
-export type { SelectDecorationSpec, SelectOption } from "./decorations";
+export type { SelectDecorationSpec, SelectOption, SelectOptionsResult } from "./decorations";
 export { defaultCatalog, mergeCatalogs } from "./catalog";
 
 /**

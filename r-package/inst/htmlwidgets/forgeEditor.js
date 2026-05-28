@@ -19,11 +19,17 @@ HTMLWidgets.widget({
         console.warn("[forge.editor] invalid decoration pattern:", spec.pattern, err);
         return null;
       }
-      var opts = Array.isArray(spec.options) ? spec.options.slice() : [];
-      return {
-        pattern: re,
-        options: function() { return opts; }
-      };
+      // `options` may be a function (dynamic/async, e.g. fetch()) supplied from
+      // downstream JS via setDecorations; forward it untouched. The R
+      // `forge_decoration()` path always sends a static array, which we wrap.
+      var options;
+      if (typeof spec.options === "function") {
+        options = spec.options;
+      } else {
+        var opts = Array.isArray(spec.options) ? spec.options.slice() : [];
+        options = function() { return opts; };
+      }
+      return { pattern: re, options: options };
     }
 
     function toNativeDecorations(specs) {

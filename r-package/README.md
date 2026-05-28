@@ -103,4 +103,31 @@ HTMLWidgets.find("#ed").setDecorations([
 ]);
 ```
 
+### Dynamic / async options (`fetch()`)
+
+`forge_decoration()` only carries a **static** option list — an R list can't
+hold a JS callback. To load options dynamically (e.g. from an HTTP endpoint),
+set `options` to a JS **function** via the `setDecorations` method. It receives
+the match and may return an array or a `Promise` resolving to one:
+
+```js
+HTMLWidgets.find("#ed").setDecorations([
+  {
+    pattern: 'dataset\\("([^"]*)"\\)',
+    options: async function (match) {
+      const res = await fetch("/api/datasets?q=" + encodeURIComponent(match[1]));
+      const names = await res.json();
+      return names.map((n) => ({ value: 'dataset("' + n + '")', label: n }));
+    },
+  },
+]);
+```
+
+While the promise resolves, the `<select>` shows the matched text and is
+disabled, then fills in once the options arrive. The function runs when the
+widget first mounts and whenever the matched value changes — not on every
+keystroke — so identical fetches won't fire repeatedly as the user types
+elsewhere. See the JS library's [README](../README.md#inline-select-decorations)
+for the underlying behavior.
+
 A larger working example lives in [`inst/examples/shiny-demo/app.R`](inst/examples/shiny-demo/app.R).

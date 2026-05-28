@@ -103,6 +103,22 @@ ed.setDecorations([]);                            // clear all
   option wins.
 - `options` is called with the `RegExpExecArray` for each match, so callbacks
   can vary the option list per match (e.g. via capture groups).
+- `options` may return a `Promise` (e.g. from `fetch()`) to load choices
+  dynamically. While it resolves, the widget shows the matched text and is
+  disabled, then fills in once the options arrive. It is called when the widget
+  first mounts and whenever the matched value changes — not on every keystroke —
+  so identical fetches won't fire repeatedly as the user types elsewhere.
+
+  ```ts
+  const remotePicker: SelectDecorationSpec = {
+    pattern: /dataset\("([^"]*)"\)/,
+    options: async (match) => {
+      const res = await fetch(`/api/datasets?q=${encodeURIComponent(match[1])}`);
+      const names: string[] = await res.json();
+      return names.map((n) => ({ value: `dataset("${n}")`, label: n }));
+    },
+  };
+  ```
 - Options may be plain strings (`"red"`, used as both value and label) or
   `{ value, label }` objects.
 - When two patterns would match overlapping ranges, the spec listed first
