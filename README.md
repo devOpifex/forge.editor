@@ -124,9 +124,3 @@ ed.setDecorations([]);                            // clear all
 - When two patterns would match overlapping ranges, the spec listed first
   wins.
 
-## Out of scope (for now)
-
-Linting/diagnostics, auto-formatting, signature help, and live R-backed
-completions are not included. The catalog is injectable, so a live backend can
-later be layered behind the same `mount` API.
-```
