@@ -1,10 +1,12 @@
-import { type Extension, RangeSetBuilder } from "@codemirror/state";
+import {
+  type Extension,
+  RangeSetBuilder,
+  StateField,
+} from "@codemirror/state";
 import {
   Decoration,
   type DecorationSet,
   EditorView,
-  ViewPlugin,
-  type ViewUpdate,
   WidgetType,
 } from "@codemirror/view";
 
@@ -33,10 +35,6 @@ interface NormalizedSpec {
   options: SelectDecorationSpec["options"];
 }
 
-interface PluginHandle {
-  decorations: DecorationSet;
-}
-
 function normalizeOption(o: SelectOption): { value: string; label: string } {
   return typeof o === "string"
     ? { value: o, label: o }
@@ -52,7 +50,7 @@ class SelectWidget extends WidgetType {
     readonly value: string,
     readonly spec: NormalizedSpec,
     readonly match: RegExpExecArray,
-    readonly plugin: PluginHandle,
+    readonly field: StateField<DecorationSet>,
   ) {
     super();
   }
@@ -114,7 +112,7 @@ class SelectWidget extends WidgetType {
 
     select.addEventListener("change", () => {
       const pos = view.posAtDOM(select);
-      const iter = this.plugin.decorations.iter();
+      const iter = view.state.field(this.field).iter();
       while (iter.value) {
         if (iter.from <= pos && pos < iter.to) {
           view.dispatch({
@@ -130,7 +128,11 @@ class SelectWidget extends WidgetType {
   }
 }
 
-function build(text: string, specs: NormalizedSpec[], plugin: PluginHandle): DecorationSet {
+function build(
+  text: string,
+  specs: NormalizedSpec[],
+  field: StateField<DecorationSet>,
+): DecorationSet {
   type Hit = { from: number; to: number; widget: SelectWidget };
   const hits: Hit[] = [];
 
@@ -153,7 +155,7 @@ function build(text: string, specs: NormalizedSpec[], plugin: PluginHandle): Dec
         }
       }
       if (overlaps) continue;
-      hits.push({ from, to, widget: new SelectWidget(m[0], spec, m, plugin) });
+      hits.push({ from, to, widget: new SelectWidget(m[0], spec, m, field) });
     }
   }
 
@@ -176,22 +178,18 @@ export function selectDecorations(specs: ReadonlyArray<SelectDecorationSpec>): E
     options: s.options,
   }));
 
-  return ViewPlugin.fromClass(
-    class implements PluginHandle {
-      decorations: DecorationSet;
-
-      constructor(view: EditorView) {
-        this.decorations = build(view.state.doc.toString(), normalized, this);
-      }
-
-      update(u: ViewUpdate) {
-        if (u.docChanged) {
-          this.decorations = build(u.state.doc.toString(), normalized, this);
-        }
-      }
+  const field: StateField<DecorationSet> = StateField.define<DecorationSet>({
+    create(state) {
+      return build(state.doc.toString(), normalized, field);
     },
-    {
-      decorations: (v) => v.decorations,
+    update(deco, tr) {
+      if (tr.docChanged) {
+        return build(tr.state.doc.toString(), normalized, field);
+      }
+      return deco;
     },
-  );
+    provide: (f) => EditorView.decorations.from(f),
+  });
+
+  return field;
 }

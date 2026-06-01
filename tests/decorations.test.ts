@@ -145,6 +145,32 @@ describe("selectDecorations", () => {
     expect(select.disabled).toBe(false);
   });
 
+  it("renders a replace widget whose match spans a line break without throwing", () => {
+    // A bracket class like [^\]]* matches newlines, so a match can cross a line
+    // break. Replacing decorations that span a line break are illegal from a
+    // ViewPlugin but legal from a StateField — this must not throw.
+    const spec: SelectDecorationSpec = {
+      pattern: /KW\[[^\]]*\]/,
+      options: () => ["KW[a]", "KW[b]"],
+    };
+    const v = setup("KW[multi\nline]", [spec]);
+    const selects = v.dom.querySelectorAll("select.cm-forge-select");
+    expect(selects).toHaveLength(1);
+  });
+
+  it("survives deleting the closing bracket of a rendered token", () => {
+    const spec: SelectDecorationSpec = {
+      pattern: /KW\[[^\]]*\]/,
+      options: () => ["KW[a]", "KW[b]"],
+    };
+    const v = setup("x <- KW[a]\nKW[b]", [spec]);
+    expect(v.dom.querySelectorAll("select.cm-forge-select")).toHaveLength(2);
+    // Delete the first token's closing "]" — the remaining open bracket now lets
+    // the regex match across the newline to the next "]". Must not throw.
+    expect(() => v.dispatch({ changes: { from: 9, to: 10 } })).not.toThrow();
+    expect(v.state.doc.toString()).toBe("x <- KW[a\nKW[b]");
+  });
+
   it("adds the global flag to non-global patterns so every match is decorated", () => {
     const spec: SelectDecorationSpec = {
       pattern: /\bX\b/,
