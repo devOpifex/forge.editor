@@ -12,8 +12,10 @@ export interface MergeResolveEvent {
 
 /**
  * Build the unified merge view extension diffing the live document (the "new"
- * side) against `original` (the base), with inline Accept/Reject controls.
+ * side) against `original` (the base). Inline per-chunk Accept/Reject controls
+ * are disabled — resolution is all-or-nothing via the editor's
+ * `acceptAllChanges()` / `rejectAllChanges()` API.
  */
 export function buildUnifiedMerge(original: string) {
-  return unifiedMergeView({ original, mergeControls: true, gutter: true });
+  return unifiedMergeView({ original, mergeControls: false, gutter: true });
 }
