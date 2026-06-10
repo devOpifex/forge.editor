@@ -10,7 +10,17 @@ ui <- page_sidebar(
     position = "right",
     width = 360,
     title = "Editor contents",
-    verbatimTextOutput("code")
+    verbatimTextOutput("code"),
+    tags$hr(),
+    tags$strong("Push an update (no re-render)"),
+    tags$p(
+      class = "text-muted small",
+      "These swap the document in place via ", tags$code("updateForgeEditor()"),
+      " — the cursor, scroll, undo history and LSP connection survive."
+    ),
+    actionButton("push_summary", "Push: summarise()", class = "btn-sm"),
+    actionButton("push_plot", "Push: ggplot()", class = "btn-sm"),
+    actionButton("push_clear", "Clear editor", class = "btn-sm btn-outline-secondary")
   ),
   card(
     full_screen = TRUE,
@@ -82,6 +92,35 @@ server <- function(input, output, session) {
 
   output$code <- renderText({
     input$ed_code %||% ""
+  })
+
+  # Demonstrate pushing dynamic updates into the already-rendered editor
+  # without re-running `renderForgeEditor()`. Only the document text changes;
+  # the live LSP/decorations wiring stays intact.
+  observeEvent(input$push_summary, {
+    updateForgeEditor("ed", code = paste(
+      "library(dplyr)",
+      "",
+      "mtcars |>",
+      "  group_by(cyl) |>",
+      "  summarise(mpg = mean(mpg))",
+      sep = "\n"
+    ))
+  })
+
+  observeEvent(input$push_plot, {
+    updateForgeEditor("ed", code = paste(
+      "library(ggplot2)",
+      "",
+      "ggplot(mtcars, aes(wt, mpg)) +",
+      "  geom_point() +",
+      "  geom_smooth(method = \"lm\")",
+      sep = "\n"
+    ))
+  })
+
+  observeEvent(input$push_clear, {
+    updateForgeEditor("ed", code = "")
   })
 }
 

@@ -121,6 +121,39 @@ renderForgeEditor <- function(expr, env = parent.frame(), quoted = FALSE) {
   htmlwidgets::shinyRenderWidget(expr, forgeEditorOutput, env, quoted = TRUE)
 }
 
+#' Update a rendered forge_editor without re-rendering
+#'
+#' Pushes new contents to an editor that is already on the page, without
+#' re-running [forge_editor()]. The document is replaced via a single
+#' CodeMirror transaction, so the selection, scroll position, undo history and
+#' any live LSP connection are preserved. Only the document `code` can be
+#' updated for now.
+#'
+#' @param id The output id of the editor to update (the `outputId` passed to
+#'   [forgeEditorOutput()] / used with [renderForgeEditor()]).
+#' @param code New document contents. If `NULL`, no change is sent.
+#' @param session The Shiny session; defaults to the current reactive domain.
+#'
+#' @export
+updateForgeEditor <- function(
+  id,
+  code = NULL,
+  session = shiny::getDefaultReactiveDomain()
+) {
+  if (is.null(session)) {
+    stop(
+      "`updateForgeEditor()` must be called within a Shiny session.",
+      call. = FALSE
+    )
+  }
+  message <- list(id = session$ns(id))
+  if (!is.null(code)) {
+    message$code <- code
+  }
+  session$sendCustomMessage("forgeEditor:update", message)
+  invisible()
+}
+
 resolve_lsp_options <- function(lsp) {
   if (isFALSE(lsp) || is.null(lsp)) {
     return(NULL)
