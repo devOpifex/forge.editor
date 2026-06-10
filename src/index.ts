@@ -3,6 +3,7 @@ import type { EditorInstance, MountOptions } from "./types";
 
 export type { Catalog, CompletionItem, EditorInstance, LSPOptions, MountOptions } from "./types";
 export type { SelectDecorationSpec, SelectOption, SelectOptionsResult } from "./decorations";
+export type { MergeResolveEvent } from "./merge";
 export { defaultCatalog, mergeCatalogs } from "./catalog";
 
 /**

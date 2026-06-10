@@ -1,3 +1,4 @@
+import type { MergeResolveEvent } from "./merge";
 import type { SelectDecorationSpec } from "./decorations";
 
 /** A single autocomplete / hover entry exported by an R package. */
@@ -43,6 +44,8 @@ export interface MountOptions {
   theme?: "light" | "dark";
   /** Convenience callback fired whenever the document changes. */
   onChange?: (code: string) => void;
+  /** Convenience callback fired once a merge (see {@link EditorInstance.setValue}) is fully resolved. */
+  onMergeResolve?: (e: MergeResolveEvent) => void;
   /** Wire the editor to a language server. When omitted, only the static catalog is used. */
   lsp?: LSPOptions;
   /** Inline `<select>` widget decorations driven by regex patterns. */
@@ -53,10 +56,23 @@ export interface MountOptions {
 export interface EditorInstance {
   /** Current editor contents. */
   getValue(): string;
-  /** Replace the entire document. */
-  setValue(code: string): void;
+  /**
+   * Replace the entire document. With `{ merge: true }`, instead of replacing
+   * outright, open a unified diff/merge view of `code` against the current
+   * contents; the merge resolves (and {@link onMergeResolve} fires) once every
+   * chunk is accepted or rejected.
+   */
+  setValue(code: string, opts?: { merge?: boolean }): void;
   /** Subscribe to document changes. Returns an unsubscribe function. */
   onChange(cb: (code: string) => void): () => void;
+  /** Subscribe to merge resolution. Returns an unsubscribe function. */
+  onMergeResolve(cb: (e: MergeResolveEvent) => void): () => void;
+  /** True while a merge view is active. */
+  isMerging(): boolean;
+  /** Resolve a live merge by accepting all remaining chunks. */
+  acceptAllChanges(): void;
+  /** Resolve a live merge by rejecting all remaining chunks. */
+  rejectAllChanges(): void;
   /** Replace the active inline `<select>` decoration specs. Pass `[]` to clear. */
   setDecorations(specs: ReadonlyArray<SelectDecorationSpec>): void;
   /** Move keyboard focus into the editor. */

@@ -21,6 +21,14 @@
 #'   entry is most easily built with [forge_decoration()]; see that function
 #'   for the expected shape. The same specs can also be applied from JS at
 #'   runtime via the widget instance's `setDecorations` method.
+#' @param onMerge Optional [htmlwidgets::JS()] callback invoked when a merge view
+#'   (opened via `updateForgeEditor(merge = TRUE)`) is fully resolved. The
+#'   callback has signature `function(e, elementId)` where `e` is
+#'   `{ code, accepted, rejected }` (the final merged document and how many
+#'   chunks were accepted vs rejected). Use it to run your own
+#'   `Shiny.setInputValue(...)` so the result can be picked up server-side under
+#'   any input name. When omitted, the result is reported on the Shiny input
+#'   `input[[paste0(id, "_merge")]]`.
 #' @param width,height Widget dimensions, passed through to htmlwidgets.
 #' @param elementId Optional explicit DOM id for the widget container. When
 #'   `lsp` is enabled, the same id is used to namespace the Shiny
@@ -35,6 +43,7 @@ forge_editor <- function(
   catalog = NULL,
   lsp = FALSE,
   decorations = NULL,
+  onMerge = NULL,
   width = NULL,
   height = NULL,
   elementId = NULL
@@ -48,6 +57,10 @@ forge_editor <- function(
   )
   if (!is.null(catalog)) {
     x$catalog <- catalog
+  }
+  if (!is.null(onMerge)) {
+    # Expected to be an htmlwidgets::JS() callback: function(e, elementId).
+    x$onMerge <- onMerge
   }
 
   decorations <- normalize_decorations(decorations)
@@ -124,20 +137,38 @@ renderForgeEditor <- function(expr, env = parent.frame(), quoted = FALSE) {
 #' Update a rendered forge_editor without re-rendering
 #'
 #' Pushes new contents to an editor that is already on the page, without
-#' re-running [forge_editor()]. The document is replaced via a single
+#' re-running [forge_editor()]. By default the document is replaced via a single
 #' CodeMirror transaction, so the selection, scroll position, undo history and
-#' any live LSP connection are preserved. Only the document `code` can be
-#' updated for now.
+#' any live LSP connection are preserved.
+#'
+#' With `merge = TRUE`, the new `code` is instead shown as a unified diff/merge
+#' view against the current contents, with inline Accept/Reject buttons per
+#' change. Once every chunk is resolved (by the user, or via the `action`
+#' argument) the merge view tears down on its own and the final merged document
+#' is reported back to the server (see Details).
 #'
 #' @param id The output id of the editor to update (the `outputId` passed to
 #'   [forgeEditorOutput()] / used with [renderForgeEditor()]).
 #' @param code New document contents. If `NULL`, no change is sent.
+#' @param merge If `TRUE`, present `code` as a unified diff/merge view against
+#'   the current contents instead of replacing the document outright.
+#' @param action Optional bulk control for a merge already on screen: one of
+#'   `"acceptAll"` or `"rejectAll"`.
 #' @param session The Shiny session; defaults to the current reactive domain.
+#'
+#' @details When a merge is fully resolved (every chunk accepted or rejected, or
+#'   resolved via `action`), the editor reports a single value on the Shiny input
+#'   `input[[paste0(id, "_merge")]]`, shaped as
+#'   `list(code = <final document>, accepted = <n>, rejected = <n>)`. To pick the
+#'   result up under a different input name (or trigger extra logic), supply an
+#'   `onMerge` callback to [forge_editor()].
 #'
 #' @export
 updateForgeEditor <- function(
   id,
   code = NULL,
+  merge = FALSE,
+  action = NULL,
   session = shiny::getDefaultReactiveDomain()
 ) {
   if (is.null(session)) {
@@ -149,6 +180,12 @@ updateForgeEditor <- function(
   message <- list(id = session$ns(id))
   if (!is.null(code)) {
     message$code <- code
+  }
+  if (isTRUE(merge)) {
+    message$merge <- TRUE
+  }
+  if (!is.null(action)) {
+    message$action <- match.arg(action, c("acceptAll", "rejectAll"))
   }
   session$sendCustomMessage("forgeEditor:update", message)
   invisible()

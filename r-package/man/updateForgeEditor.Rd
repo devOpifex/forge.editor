@@ -4,7 +4,13 @@
 \alias{updateForgeEditor}
 \title{Update a rendered forge_editor without re-rendering}
 \usage{
-updateForgeEditor(id, code = NULL, session = shiny::getDefaultReactiveDomain())
+updateForgeEditor(
+  id,
+  code = NULL,
+  merge = FALSE,
+  action = NULL,
+  session = shiny::getDefaultReactiveDomain()
+)
 }
 \arguments{
 \item{id}{The output id of the editor to update (the `outputId` passed to
@@ -12,12 +18,31 @@ updateForgeEditor(id, code = NULL, session = shiny::getDefaultReactiveDomain())
 
 \item{code}{New document contents. If `NULL`, no change is sent.}
 
+\item{merge}{If `TRUE`, present `code` as a unified diff/merge view against
+the current contents instead of replacing the document outright.}
+
+\item{action}{Optional bulk control for a merge already on screen: one of
+`"acceptAll"` or `"rejectAll"`.}
+
 \item{session}{The Shiny session; defaults to the current reactive domain.}
 }
 \description{
 Pushes new contents to an editor that is already on the page, without
-re-running [forge_editor()]. The document is replaced via a single
+re-running [forge_editor()]. By default the document is replaced via a single
 CodeMirror transaction, so the selection, scroll position, undo history and
-any live LSP connection are preserved. Only the document `code` can be
-updated for now.
+any live LSP connection are preserved.
+}
+\details{
+With `merge = TRUE`, the new `code` is instead shown as a unified diff/merge
+view against the current contents, with inline Accept/Reject buttons per
+change. Once every chunk is resolved (by the user, or via the `action`
+argument) the merge view tears down on its own and the final merged document
+is reported back to the server (see Details).
+
+When a merge is fully resolved (every chunk accepted or rejected, or
+  resolved via `action`), the editor reports a single value on the Shiny input
+  `input[[paste0(id, "_merge")]]`, shaped as
+  `list(code = <final document>, accepted = <n>, rejected = <n>)`. To pick the
+  result up under a different input name (or trigger extra logic), supply an
+  `onMerge` callback to [forge_editor()].
 }

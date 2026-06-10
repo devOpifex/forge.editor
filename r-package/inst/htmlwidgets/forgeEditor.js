@@ -93,6 +93,18 @@ HTMLWidgets.widget({
           instance.onChange(function(code) {
             Shiny.setInputValue(el.id + "_code", code, { priority: "deferred" });
           });
+          // Report a resolved merge (opened via `updateForgeEditor(merge=TRUE)`).
+          // `e = { code, accepted, rejected }`. If the R side supplied a custom
+          // `onMerge` callback (an htmlwidgets::JS() function), defer to it so the
+          // author controls the input name/payload; otherwise use the default
+          // `<id>_merge` input. `priority:"event"` so identical resolves still fire.
+          instance.onMergeResolve(function(e) {
+            if (typeof x.onMerge === "function") {
+              x.onMerge(e, el.id);
+            } else {
+              Shiny.setInputValue(el.id + "_merge", e, { priority: "event" });
+            }
+          });
         }
       },
 
@@ -110,9 +122,15 @@ HTMLWidgets.widget({
       update: function(msg) {
         if (!instance || !msg) return;
         if (typeof msg.code === "string") {
-          instance.setValue(msg.code);
+          // `merge:true` opens a unified diff/merge view instead of replacing
+          // the document outright. `lastValue` is kept in sync either way so a
+          // later `renderValue` re-render does not clobber the pushed value.
+          instance.setValue(msg.code, { merge: !!msg.merge });
           lastValue = msg.code;
         }
+        // Bulk-resolve a merge already on screen.
+        if (msg.action === "acceptAll") instance.acceptAllChanges();
+        if (msg.action === "rejectAll") instance.rejectAllChanges();
       },
 
       // Public helper for downstream JS to swap decoration specs at runtime

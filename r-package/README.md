@@ -60,6 +60,56 @@ host the language-server bridge.
 forge.editor::forge_editor(value = "1 + 1")
 ```
 
+## Merge / diff view
+
+Instead of overwriting the editor outright, `updateForgeEditor()` can present new
+contents as a **unified diff** with inline Accept/Reject buttons per change, by
+passing `merge = TRUE`. The user resolves each chunk; once all are resolved the
+merge view disappears and the final document is reported back on
+`input$<id>_merge` as `list(code, accepted, rejected)`:
+
+```r
+ui <- fluidPage(
+  forgeEditorOutput("ed", height = "500px"),
+  actionButton("suggest", "Suggest rewrite"),
+  verbatimTextOutput("merge")
+)
+
+server <- function(input, output, session) {
+  output$ed <- renderForgeEditor({
+    forge_editor(value = "mtcars |> filter(mpg > 20)")
+  })
+
+  observeEvent(input$suggest, {
+    updateForgeEditor(
+      "ed",
+      code = "mtcars |>\n  filter(mpg > 20) |>\n  select(mpg, cyl)",
+      merge = TRUE
+    )
+  })
+
+  # Fires once the user has accepted/rejected every chunk.
+  observeEvent(input$ed_merge, {
+    str(input$ed_merge) # list(code = "...", accepted = 1, rejected = 0)
+  })
+}
+```
+
+Resolve a merge programmatically with `updateForgeEditor("ed", action = "acceptAll")`
+or `action = "rejectAll"`.
+
+To pick the result up under a different input name (or run extra logic in the
+browser), supply an `onMerge` callback to `forge_editor()`:
+
+```r
+forge_editor(
+  value = "1 + 1",
+  onMerge = htmlwidgets::JS(
+    "function(e, id) { Shiny.setInputValue(id + '_applied', e.code, {priority: 'event'}); }"
+  )
+)
+```
+
 ## Inline `<select>` decorations
 
 `forge_editor()` accepts a `decorations` argument: a list of inline `<select>`
