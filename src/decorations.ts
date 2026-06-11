@@ -33,8 +33,6 @@ export interface SelectDecorationSpec {
 interface NormalizedSpec {
   pattern: RegExp;
   options: SelectDecorationSpec["options"];
-  /** True when `value` is matched in full by the pattern (used to gate the first-option default). */
-  matches: (value: string) => boolean;
 }
 
 function normalizeOption(o: SelectOption): { value: string; label: string } {
@@ -70,21 +68,6 @@ class SelectWidget extends WidgetType {
     const select = document.createElement("select");
     select.className = "cm-forge-select";
 
-    // Locate this widget's range in the document and replace it with `value`.
-    const commit = (value: string) => {
-      const pos = view.posAtDOM(select);
-      const iter = view.state.field(this.field).iter();
-      while (iter.value) {
-        if (iter.from <= pos && pos < iter.to) {
-          view.dispatch({
-            changes: { from: iter.from, to: iter.to, insert: value },
-          });
-          return;
-        }
-        iter.next();
-      }
-    };
-
     const fill = (raw: ReadonlyArray<SelectOption>) => {
       const options = raw.map(normalizeOption);
       select.replaceChildren();
@@ -100,18 +83,7 @@ class SelectWidget extends WidgetType {
         select.appendChild(optEl);
       }
       if (!matched && select.firstElementChild) {
-        const first = select.firstElementChild as HTMLOptionElement;
-        first.selected = true;
-        // The matched text isn't one of the options (e.g. the user just typed the
-        // decorator). Commit the first option so the document agrees with what the
-        // widget shows — but only when that value still matches the pattern in full,
-        // so the rewrite can't drop the widget or loop. Deferred via a microtask
-        // because we can't dispatch a transaction during a view update.
-        if (this.spec.matches(first.value)) {
-          queueMicrotask(() => {
-            if (select.isConnected) commit(first.value);
-          });
-        }
+        (select.firstElementChild as HTMLOptionElement).selected = true;
       }
     };
 
@@ -138,7 +110,19 @@ class SelectWidget extends WidgetType {
       fill(result);
     }
 
-    select.addEventListener("change", () => commit(select.value));
+    select.addEventListener("change", () => {
+      const pos = view.posAtDOM(select);
+      const iter = view.state.field(this.field).iter();
+      while (iter.value) {
+        if (iter.from <= pos && pos < iter.to) {
+          view.dispatch({
+            changes: { from: iter.from, to: iter.to, insert: select.value },
+          });
+          return;
+        }
+        iter.next();
+      }
+    });
 
     return select;
   }
@@ -189,17 +173,10 @@ function build(
  * long as the pattern still matches that new value, the widget reappears with the new selection.
  */
 export function selectDecorations(specs: ReadonlyArray<SelectDecorationSpec>): Extension {
-  const normalized: NormalizedSpec[] = specs.map((s) => {
-    // A non-global, fully-anchored clone: tells us whether a candidate value is a
-    // complete match (so committing it leaves the widget intact rather than dropping
-    // or growing it). Kept separate from the global `pattern` used to scan the doc.
-    const full = new RegExp(`^(?:${s.pattern.source})$`, s.pattern.flags.replace("g", ""));
-    return {
-      pattern: withGlobalFlag(s.pattern),
-      options: s.options,
-      matches: (value: string) => full.test(value),
-    };
-  });
+  const normalized: NormalizedSpec[] = specs.map((s) => ({
+    pattern: withGlobalFlag(s.pattern),
+    options: s.options,
+  }));
 
   const field: StateField<DecorationSet> = StateField.define<DecorationSet>({
     create(state) {
