@@ -58,6 +58,41 @@ describe("selectDecorations", () => {
     expect(select.value).toBe("a");
   });
 
+  it("commits the first option into the document when the typed text matches no option", async () => {
+    // The pattern matches any quoted string, but only these three are valid options.
+    const spec: SelectDecorationSpec = {
+      pattern: /"[^"]*"/,
+      options: () => [
+        { value: '"red"', label: "red" },
+        { value: '"green"', label: "green" },
+        { value: '"blue"', label: "blue" },
+      ],
+    };
+    const v = setup('color <- "magenta"', [spec]);
+    const select = v.dom.querySelector("select.cm-forge-select") as HTMLSelectElement;
+    // Renders showing the first option immediately...
+    expect(select.value).toBe('"red"');
+    // ...and writes that choice back so the document agrees.
+    await Promise.resolve();
+    expect(v.state.doc.toString()).toBe('color <- "red"');
+  });
+
+  it("does not rewrite the document when the first option wouldn't match the pattern", async () => {
+    const spec: SelectDecorationSpec = {
+      pattern: /__PICK__/,
+      options: () => [
+        { value: "a", label: "A" },
+        { value: "b", label: "B" },
+      ],
+    };
+    const v = setup("__PICK__", [spec]);
+    const select = v.dom.querySelector("select.cm-forge-select") as HTMLSelectElement;
+    expect(select.value).toBe("a");
+    await Promise.resolve();
+    // "a" doesn't match /__PICK__/, so committing it would drop the widget — leave the doc alone.
+    expect(v.state.doc.toString()).toBe("__PICK__");
+  });
+
   it("accepts plain-string options (value === label)", () => {
     const spec: SelectDecorationSpec = {
       pattern: /\bX\b/,

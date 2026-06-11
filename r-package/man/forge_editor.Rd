@@ -38,13 +38,7 @@ for the expected shape. The same specs can also be applied from JS at
 runtime via the widget instance's `setDecorations` method.}
 
 \item{onMerge}{Optional [htmlwidgets::JS()] callback invoked when a merge view
-(opened via `updateForgeEditor(merge = TRUE)`) is fully resolved. The
-callback has signature `function(e, elementId)` where `e` is
-`{ code, accepted, rejected }` (the final merged document and how many
-chunks were accepted vs rejected). Use it to run your own
-`Shiny.setInputValue(...)` so the result can be picked up server-side under
-any input name. When omitted, the result is reported on the Shiny input
-`input[[paste0(id, "_merge")]]`.}
+(opened via `updateForgeEditor(merge = TRUE)`) is fully resolved.}
 
 \item{width, height}{Widget dimensions, passed through to htmlwidgets.}
 

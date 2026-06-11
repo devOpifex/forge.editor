@@ -22,13 +22,7 @@
 #'   for the expected shape. The same specs can also be applied from JS at
 #'   runtime via the widget instance's `setDecorations` method.
 #' @param onMerge Optional [htmlwidgets::JS()] callback invoked when a merge view
-#'   (opened via `updateForgeEditor(merge = TRUE)`) is fully resolved. The
-#'   callback has signature `function(e, elementId)` where `e` is
-#'   `{ code, accepted, rejected }` (the final merged document and how many
-#'   chunks were accepted vs rejected). Use it to run your own
-#'   `Shiny.setInputValue(...)` so the result can be picked up server-side under
-#'   any input name. When omitted, the result is reported on the Shiny input
-#'   `input[[paste0(id, "_merge")]]`.
+#'   (opened via `updateForgeEditor(merge = TRUE)`) is fully resolved.
 #' @param width,height Widget dimensions, passed through to htmlwidgets.
 #' @param elementId Optional explicit DOM id for the widget container. When
 #'   `lsp` is enabled, the same id is used to namespace the Shiny
@@ -240,7 +234,10 @@ forge_decoration <- function(pattern, options, flags = "") {
     stop("`flags` must be a single non-NA character string.", call. = FALSE)
   }
   if (!is.list(options) || length(options) == 0L) {
-    stop("`options` must be a non-empty list of list(value, label) entries.", call. = FALSE)
+    stop(
+      "`options` must be a non-empty list of list(value, label) entries.",
+      call. = FALSE
+    )
   }
   for (i in seq_along(options)) {
     o <- options[[i]]
@@ -269,7 +266,10 @@ normalize_decorations <- function(decorations) {
     s <- decorations[[i]]
     if (!is.list(s) || is.null(s$pattern) || is.null(s$options)) {
       stop(
-        sprintf("`decorations[[%d]]` must have `pattern` and `options` fields.", i),
+        sprintf(
+          "`decorations[[%d]]` must have `pattern` and `options` fields.",
+          i
+        ),
         call. = FALSE
       )
     }
