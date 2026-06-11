@@ -68,6 +68,22 @@ class SelectWidget extends WidgetType {
     const select = document.createElement("select");
     select.className = "cm-forge-select";
 
+    // Rewrite the matched document range with `value`, locating the range fresh
+    // each time so it stays correct after edits move the widget around.
+    const commit = (value: string) => {
+      const pos = view.posAtDOM(select);
+      const iter = view.state.field(this.field).iter();
+      while (iter.value) {
+        if (iter.from <= pos && pos < iter.to) {
+          view.dispatch({
+            changes: { from: iter.from, to: iter.to, insert: value },
+          });
+          return;
+        }
+        iter.next();
+      }
+    };
+
     const fill = (raw: ReadonlyArray<SelectOption>) => {
       const options = raw.map(normalizeOption);
       select.replaceChildren();
@@ -83,7 +99,16 @@ class SelectWidget extends WidgetType {
         select.appendChild(optEl);
       }
       if (!matched && select.firstElementChild) {
-        (select.firstElementChild as HTMLOptionElement).selected = true;
+        const first = select.firstElementChild as HTMLOptionElement;
+        first.selected = true;
+        // The matched text isn't one of the options (e.g. the user typed a bare
+        // prefix like `GET_CODELIST` and the options are `GET_CODELIST["…"]`).
+        // Selecting the first option visually isn't enough — the document still
+        // holds the prefix, so write the resolved value back. Deferred because we
+        // can't dispatch while the view update that built this widget is running.
+        if (first.value !== this.value) {
+          queueMicrotask(() => commit(first.value));
+        }
       }
     };
 
@@ -110,19 +135,7 @@ class SelectWidget extends WidgetType {
       fill(result);
     }
 
-    select.addEventListener("change", () => {
-      const pos = view.posAtDOM(select);
-      const iter = view.state.field(this.field).iter();
-      while (iter.value) {
-        if (iter.from <= pos && pos < iter.to) {
-          view.dispatch({
-            changes: { from: iter.from, to: iter.to, insert: select.value },
-          });
-          return;
-        }
-        iter.next();
-      }
-    });
+    select.addEventListener("change", () => commit(select.value));
 
     return select;
   }
@@ -191,5 +204,13 @@ export function selectDecorations(specs: ReadonlyArray<SelectDecorationSpec>): E
     provide: (f) => EditorView.decorations.from(f),
   });
 
-  return field;
+  // Treat each widget as a single atomic unit: the cursor skips over it and a
+  // single Backspace/Delete removes the whole token. Without this, deleting
+  // character-by-character passes through partial states (e.g. `GET_CODELIST`
+  // with the closing bracket gone) that the pattern still matches as a bare
+  // prefix — which the auto-commit in the widget would immediately re-expand,
+  // making the token impossible to delete.
+  const atomic = EditorView.atomicRanges.of((view) => view.state.field(field));
+
+  return [field, atomic];
 }

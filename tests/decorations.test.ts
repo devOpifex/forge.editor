@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
+import { deleteCharBackward } from "@codemirror/commands";
 import { selectDecorations, type SelectDecorationSpec } from "../src/decorations";
 
 let view: EditorView | null = null;
@@ -56,6 +57,45 @@ describe("selectDecorations", () => {
     const v = setup("__PICK__", [spec]);
     const select = v.dom.querySelector("select.cm-forge-select") as HTMLSelectElement;
     expect(select.value).toBe("a");
+  });
+
+  it("commits the first option to the document when the match is a bare prefix", async () => {
+    // The matched text is a prefix (`GET_CODELIST`) that is not itself one of the
+    // options (`GET_CODELIST["…"]`). Selecting the first option visually isn't
+    // enough — the document must be rewritten so the captured code is complete.
+    const spec: SelectDecorationSpec = {
+      pattern: /GET_CODELIST(?:\[[^\]\n]*\])?/,
+      options: () => ['GET_CODELIST["first_id"]', 'GET_CODELIST["second_id"]'],
+    };
+    const v = setup("x <- GET_CODELIST", [spec]);
+    const select = v.dom.querySelector("select.cm-forge-select") as HTMLSelectElement;
+    expect(select.value).toBe('GET_CODELIST["first_id"]');
+    // The write-back is deferred to a microtask.
+    await Promise.resolve();
+    expect(v.state.doc.toString()).toBe('x <- GET_CODELIST["first_id"]');
+  });
+
+  it("does not rewrite the document when the match is already a valid option", async () => {
+    const v = setup('color <- "green"', [colorSpec]);
+    await Promise.resolve();
+    expect(v.state.doc.toString()).toBe('color <- "green"');
+  });
+
+  it("deletes the whole atomic token in one Backspace instead of re-expanding", async () => {
+    // Regression: with an optional-group pattern, a partial delete leaves a bare
+    // prefix the regex still matches, which the auto-commit would re-expand —
+    // trapping the token. Atomic ranges make Backspace remove the whole token.
+    const spec: SelectDecorationSpec = {
+      pattern: /GET_CODELIST(?:\[[^\]\n]*\])?/,
+      options: () => ['GET_CODELIST["first_id"]', 'GET_CODELIST["second_id"]'],
+    };
+    const v = setup('GET_CODELIST["first_id"]', [spec]);
+    // Cursor at the very end, just after the (atomic) token.
+    v.dispatch({ selection: { anchor: v.state.doc.length } });
+    deleteCharBackward(v);
+    await Promise.resolve();
+    expect(v.state.doc.toString()).toBe("");
+    expect(v.dom.querySelectorAll("select.cm-forge-select")).toHaveLength(0);
   });
 
   it("accepts plain-string options (value === label)", () => {
