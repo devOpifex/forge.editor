@@ -1,7 +1,7 @@
 Package: forge.editor
 Type: Package
 Title: In-Browser R Code Editor (CodeMirror 6) for Shiny
-Version: 0.1.0
+Version: 0.2.0
 Authors@R: person("John", "Coene", email = "jcoenep@gmail.com", role = c("aut", "cre"))
 Description: An htmlwidget that embeds the forge.editor JavaScript library
     (a CodeMirror 6-based R code editor) in R, RStudio Viewer, and Shiny
