@@ -9,6 +9,7 @@ updateForgeEditor(
   code = NULL,
   merge = FALSE,
   action = NULL,
+  read_only = NULL,
   session = shiny::getDefaultReactiveDomain()
 )
 }
@@ -23,6 +24,9 @@ the current contents instead of replacing the document outright.}
 
 \item{action}{Optional bulk control for a merge already on screen: one of
 `"acceptAll"` or `"rejectAll"`.}
+
+\item{read_only}{Optional logical. When not `NULL`, toggles the editor's
+read-only state without re-rendering.}
 
 \item{session}{The Shiny session; defaults to the current reactive domain.}
 }

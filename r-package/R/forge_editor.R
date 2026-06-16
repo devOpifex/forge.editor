@@ -10,7 +10,7 @@
 #'
 #' @param value Initial document contents.
 #' @param theme One of `"light"` or `"dark"`.
-#' @param readOnly If `TRUE`, the editor renders read-only.
+#' @param read_only If `TRUE`, the editor renders read-only.
 #' @param catalog Optional named list mirroring the JS `Catalog` shape:
 #'   `list(pkgname = list(list(name = "fn", signature = "...", doc = "...")))`.
 #'   Overrides the bundled default catalog.
@@ -24,7 +24,7 @@
 #' @param onMerge Optional [htmlwidgets::JS()] callback invoked when a merge view
 #'   (opened via `updateForgeEditor(merge = TRUE)`) is fully resolved. The
 #'   callback has signature `function(e, elementId)` where `e` is
-#'   `{ code, accepted, rejected }` (the final merged document and how many
+#'   `( code, accepted, rejected )` (the final merged document and how many
 #'   chunks were accepted vs rejected). Use it to run your own
 #'   `Shiny.setInputValue(...)` so the result can be picked up server-side under
 #'   any input name. When omitted, the result is reported on the Shiny input
@@ -39,7 +39,7 @@
 forge_editor <- function(
   value = "",
   theme = c("light", "dark"),
-  readOnly = FALSE,
+  read_only = FALSE,
   catalog = NULL,
   lsp = FALSE,
   decorations = NULL,
@@ -53,7 +53,7 @@ forge_editor <- function(
   x <- list(
     value = value,
     theme = theme,
-    readOnly = isTRUE(readOnly)
+    readOnly = isTRUE(read_only)
   )
   if (!is.null(catalog)) {
     x$catalog <- catalog
@@ -154,6 +154,8 @@ renderForgeEditor <- function(expr, env = parent.frame(), quoted = FALSE) {
 #'   the current contents instead of replacing the document outright.
 #' @param action Optional bulk control for a merge already on screen: one of
 #'   `"acceptAll"` or `"rejectAll"`.
+#' @param read_only Optional logical. When not `NULL`, toggles the editor's
+#'   read-only state without re-rendering.
 #' @param session The Shiny session; defaults to the current reactive domain.
 #'
 #' @details When a merge is fully resolved (every chunk accepted or rejected, or
@@ -169,6 +171,7 @@ updateForgeEditor <- function(
   code = NULL,
   merge = FALSE,
   action = NULL,
+  read_only = NULL,
   session = shiny::getDefaultReactiveDomain()
 ) {
   if (is.null(session)) {
@@ -187,6 +190,8 @@ updateForgeEditor <- function(
   if (!is.null(action)) {
     message$action <- match.arg(action, c("acceptAll", "rejectAll"))
   }
+
+  message$readOnly <- isTRUE(read_only)
   session$sendCustomMessage("forgeEditor:update", message)
   invisible()
 }
@@ -240,7 +245,10 @@ forge_decoration <- function(pattern, options, flags = "") {
     stop("`flags` must be a single non-NA character string.", call. = FALSE)
   }
   if (!is.list(options) || length(options) == 0L) {
-    stop("`options` must be a non-empty list of list(value, label) entries.", call. = FALSE)
+    stop(
+      "`options` must be a non-empty list of list(value, label) entries.",
+      call. = FALSE
+    )
   }
   for (i in seq_along(options)) {
     o <- options[[i]]
@@ -269,7 +277,10 @@ normalize_decorations <- function(decorations) {
     s <- decorations[[i]]
     if (!is.list(s) || is.null(s$pattern) || is.null(s$options)) {
       stop(
-        sprintf("`decorations[[%d]]` must have `pattern` and `options` fields.", i),
+        sprintf(
+          "`decorations[[%d]]` must have `pattern` and `options` fields.",
+          i
+        ),
         call. = FALSE
       )
     }

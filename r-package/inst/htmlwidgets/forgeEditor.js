@@ -131,6 +131,8 @@ HTMLWidgets.widget({
         // Bulk-resolve a merge already on screen.
         if (msg.action === "acceptAll") instance.acceptAllChanges();
         if (msg.action === "rejectAll") instance.rejectAllChanges();
+        // Toggle read-only at runtime.
+        if (typeof msg.readOnly === "boolean") instance.setReadOnly(msg.readOnly);
       },
 
       // Public helper for downstream JS to swap decoration specs at runtime

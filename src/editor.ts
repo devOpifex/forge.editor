@@ -34,6 +34,7 @@ export function createEditor(parent: HTMLElement, opts: MountOptions = {}): Edit
 
   const decorationsCompartment = new Compartment();
   const mergeCompartment = new Compartment();
+  const readOnlyCompartment = new Compartment();
 
   // Merge session state. A merge is opened by `setValue(code, { merge: true })`
   // and resolves once every chunk has been accepted or rejected, at which point
@@ -80,7 +81,11 @@ export function createEditor(parent: HTMLElement, opts: MountOptions = {}): Edit
       for (const cb of listeners) cb(code);
     }),
   ];
-  if (opts.readOnly) extensions.push(EditorState.readOnly.of(true));
+  // Read-only lives in a compartment so it can be toggled at runtime via
+  // `setReadOnly()` (see https://codemirror.net/examples/readonly/).
+  extensions.push(
+    readOnlyCompartment.of(opts.readOnly ? EditorState.readOnly.of(true) : []),
+  );
   if (opts.theme === "dark") extensions.push(oneDark);
 
   extensions.push(
@@ -166,6 +171,14 @@ export function createEditor(parent: HTMLElement, opts: MountOptions = {}): Edit
       view.dispatch({
         effects: decorationsCompartment.reconfigure(
           specs.length ? selectDecorations(specs) : [],
+        ),
+      });
+    },
+    isReadOnly: () => view.state.readOnly,
+    setReadOnly: (readOnly: boolean) => {
+      view.dispatch({
+        effects: readOnlyCompartment.reconfigure(
+          readOnly ? EditorState.readOnly.of(true) : [],
         ),
       });
     },

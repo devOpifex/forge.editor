@@ -75,6 +75,10 @@ export interface EditorInstance {
   rejectAllChanges(): void;
   /** Replace the active inline `<select>` decoration specs. Pass `[]` to clear. */
   setDecorations(specs: ReadonlyArray<SelectDecorationSpec>): void;
+  /** True while the editor is read-only. */
+  isReadOnly(): boolean;
+  /** Toggle read-only mode at runtime. */
+  setReadOnly(readOnly: boolean): void;
   /** Move keyboard focus into the editor. */
   focus(): void;
   /** Tear down the editor and free resources. */

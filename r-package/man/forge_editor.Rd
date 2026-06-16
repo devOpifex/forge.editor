@@ -7,7 +7,7 @@
 forge_editor(
   value = "",
   theme = c("light", "dark"),
-  readOnly = FALSE,
+  read_only = FALSE,
   catalog = NULL,
   lsp = FALSE,
   decorations = NULL,
@@ -22,7 +22,7 @@ forge_editor(
 
 \item{theme}{One of `"light"` or `"dark"`.}
 
-\item{readOnly}{If `TRUE`, the editor renders read-only.}
+\item{read_only}{If `TRUE`, the editor renders read-only.}
 
 \item{catalog}{Optional named list mirroring the JS `Catalog` shape:
 `list(pkgname = list(list(name = "fn", signature = "...", doc = "...")))`.
@@ -40,7 +40,7 @@ runtime via the widget instance's `setDecorations` method.}
 \item{onMerge}{Optional [htmlwidgets::JS()] callback invoked when a merge view
 (opened via `updateForgeEditor(merge = TRUE)`) is fully resolved. The
 callback has signature `function(e, elementId)` where `e` is
-`{ code, accepted, rejected }` (the final merged document and how many
+`( code, accepted, rejected )` (the final merged document and how many
 chunks were accepted vs rejected). Use it to run your own
 `Shiny.setInputValue(...)` so the result can be picked up server-side under
 any input name. When omitted, the result is reported on the Shiny input
