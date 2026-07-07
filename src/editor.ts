@@ -9,7 +9,7 @@ import { defaultCatalog } from "./catalog";
 import { lspExtensions } from "./lsp/extension";
 import { selectDecorations, type SelectDecorationSpec } from "./decorations";
 import { buildUnifiedMerge, type MergeResolveEvent } from "./merge";
-import type { Catalog, EditorInstance, MountOptions } from "./types";
+import type { Catalog, EditorInstance, MountOptions, SelectionInfo } from "./types";
 
 const forgeTheme = EditorView.baseTheme({
   ".cm-forge-info": { padding: "2px 0", maxWidth: "32rem" },
@@ -121,6 +121,18 @@ export function createEditor(parent: HTMLElement, opts: MountOptions = {}): Edit
 
   return {
     getValue: () => view.state.doc.toString(),
+    getSelection: (): SelectionInfo => {
+      const sel = view.state.selection.main;
+      const doc = view.state.doc;
+      return {
+        from: sel.from,
+        to: sel.to,
+        empty: sel.empty,
+        text: doc.sliceString(sel.from, sel.to),
+        fromLine: doc.lineAt(sel.from).number,
+        toLine: doc.lineAt(sel.to).number,
+      };
+    },
     setValue: (code: string, setOpts?: { merge?: boolean }) => {
       const current = view.state.doc.toString();
       if (setOpts?.merge && code !== current) {

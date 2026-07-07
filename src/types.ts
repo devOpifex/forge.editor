@@ -32,6 +32,22 @@ export interface LSPOptions {
   languageId?: string;
 }
 
+/** A snapshot of the editor's primary selection, returned by {@link EditorInstance.getSelection}. */
+export interface SelectionInfo {
+  /** Start offset of the selection in the document. */
+  from: number;
+  /** End offset of the selection in the document. */
+  to: number;
+  /** `true` when the selection is empty (a bare cursor, no highlighted text). */
+  empty: boolean;
+  /** The selected text (empty string when `empty`). */
+  text: string;
+  /** 1-based line number of the selection start. */
+  fromLine: number;
+  /** 1-based line number of the selection end. */
+  toLine: number;
+}
+
 /** Options accepted by {@link mount}. */
 export interface MountOptions {
   /** Initial code to load into the editor. */
@@ -56,6 +72,8 @@ export interface MountOptions {
 export interface EditorInstance {
   /** Current editor contents. */
   getValue(): string;
+  /** Snapshot of the current primary selection (offsets, text and line range). */
+  getSelection(): SelectionInfo;
   /**
    * Replace the entire document. With `{ merge: true }`, instead of replacing
    * outright, open a unified diff/merge view of `code` against the current

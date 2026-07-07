@@ -30,6 +30,35 @@ PUMP_INTERVAL <- 0.05 # seconds; 20 ticks/s keeps editor latency imperceptible.
 ROUND_TRIP_TIMEOUT <- NA # unused; kept here only to document that the new
 # bridge has no synchronous timeout — pairing happens in the browser.
 
+#' Resolve the top-level session from a (possibly module-namespaced) proxy.
+#'
+#' The browser sets the LSP channels under unprefixed names: the init input
+#' `forge_editor_lsp_init`, and the per-editor `<elementId>_lsp_send` input,
+#' where `elementId` is the editor's full DOM id (already carrying any module
+#' namespace, e.g. `"editor-codeEditor"`). A module `session_proxy` re-prefixes
+#' every `input[[...]]` read with its own namespace, so an observer registered on
+#' the proxy would wait on `<ns>-forge_editor_lsp_init` and never see the frame.
+#' Reading these inputs on the ROOT session matches the names verbatim. Inbound
+#' `_lsp_recv` traffic goes out as a custom message (never namespaced), so it is
+#' unaffected either way.
+#' @noRd
+forge_root_session <- function(session) {
+  if (is.null(session)) {
+    return(NULL)
+  }
+  # shiny >= 1.9 exposes rootScope(); a real ShinySession returns itself and a
+  # proxy delegates up the chain to the top-level session.
+  if (is.function(session$rootScope)) {
+    return(session$rootScope())
+  }
+  # Fallback: climb the proxy chain manually.
+  s <- session
+  while (inherits(s, "session_proxy") && !is.null(.subset2(s, "parent"))) {
+    s <- .subset2(s, "parent")
+  }
+  s
+}
+
 #' Ensure a session has the per-session LSP init observer installed.
 #'
 #' Called from `forge_editor()` whenever `lsp` is enabled. Idempotent: only
@@ -38,6 +67,7 @@ ROUND_TRIP_TIMEOUT <- NA # unused; kept here only to document that the new
 #' would land in an unhandled input slot.
 #' @noRd
 ensure_lsp_init_observer <- function(session) {
+  session <- forge_root_session(session)
   token <- session$token
   st <- .lsp_state[[token]]
   if (!is.null(st) && isTRUE(st$init_installed)) {
@@ -107,6 +137,7 @@ ensure_lsp_init_observer <- function(session) {
 #' subprocess and installs the per-editor observer + pump.
 #' @noRd
 start_lsp_bridge <- function(session, element_id) {
+  session <- forge_root_session(session)
   if (
     !is.character(element_id) || length(element_id) != 1 || !nzchar(element_id)
   ) {
