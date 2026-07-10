@@ -9,7 +9,7 @@ import { defaultCatalog } from "./catalog";
 import { lspExtensions } from "./lsp/extension";
 import { selectDecorations, type SelectDecorationSpec } from "./decorations";
 import { buildUnifiedMerge, type MergeResolveEvent } from "./merge";
-import type { Catalog, EditorInstance, MountOptions, SelectionInfo } from "./types";
+import type { Catalog, EditorInstance, MountOptions, SelectionInfo, Theme } from "./types";
 
 const forgeTheme = EditorView.baseTheme({
   ".cm-forge-info": { padding: "2px 0", maxWidth: "32rem" },
@@ -26,6 +26,7 @@ const forgeTheme = EditorView.baseTheme({
 /** Construct a CodeMirror editor and return the host-facing handle. */
 export function createEditor(parent: HTMLElement, opts: MountOptions = {}): EditorInstance {
   const catalog: Catalog = opts.catalog ?? defaultCatalog;
+  let theme: Theme = opts.theme === "dark" ? "dark" : "light";
   const listeners = new Set<(code: string) => void>();
   if (opts.onChange) listeners.add(opts.onChange);
 
@@ -35,6 +36,7 @@ export function createEditor(parent: HTMLElement, opts: MountOptions = {}): Edit
   const decorationsCompartment = new Compartment();
   const mergeCompartment = new Compartment();
   const readOnlyCompartment = new Compartment();
+  const themeCompartment = new Compartment();
 
   // Merge session state. A merge is opened by `setValue(code, { merge: true })`
   // and resolves once every chunk has been accepted or rejected, at which point
@@ -86,7 +88,8 @@ export function createEditor(parent: HTMLElement, opts: MountOptions = {}): Edit
   extensions.push(
     readOnlyCompartment.of(opts.readOnly ? EditorState.readOnly.of(true) : []),
   );
-  if (opts.theme === "dark") extensions.push(oneDark);
+  // Likewise the theme, so `setTheme()` can swap it without a remount.
+  extensions.push(themeCompartment.of(opts.theme === "dark" ? oneDark : []));
 
   extensions.push(
     decorationsCompartment.of(
@@ -192,6 +195,14 @@ export function createEditor(parent: HTMLElement, opts: MountOptions = {}): Edit
         effects: readOnlyCompartment.reconfigure(
           readOnly ? EditorState.readOnly.of(true) : [],
         ),
+      });
+    },
+    getTheme: () => theme,
+    setTheme: (next: Theme) => {
+      if (next !== "light" && next !== "dark") return;
+      theme = next;
+      view.dispatch({
+        effects: themeCompartment.reconfigure(next === "dark" ? oneDark : []),
       });
     },
     focus: () => view.focus(),

@@ -16,6 +16,9 @@ export interface CompletionItem {
 /** Autocomplete metadata keyed by package name. */
 export type Catalog = Record<string, CompletionItem[]>;
 
+/** Colour themes shipped with the editor. */
+export type Theme = "light" | "dark";
+
 /** LSP-backed completion / hover / diagnostics options. */
 export interface LSPOptions {
   /**
@@ -57,7 +60,7 @@ export interface MountOptions {
   /** Render the editor read-only. */
   readOnly?: boolean;
   /** Colour theme. Defaults to `"light"`. */
-  theme?: "light" | "dark";
+  theme?: Theme;
   /** Convenience callback fired whenever the document changes. */
   onChange?: (code: string) => void;
   /** Convenience callback fired once a merge (see {@link EditorInstance.setValue}) is fully resolved. */
@@ -97,6 +100,10 @@ export interface EditorInstance {
   isReadOnly(): boolean;
   /** Toggle read-only mode at runtime. */
   setReadOnly(readOnly: boolean): void;
+  /** The active colour theme. */
+  getTheme(): Theme;
+  /** Swap the colour theme at runtime. Unknown values are ignored. */
+  setTheme(theme: Theme): void;
   /** Move keyboard focus into the editor. */
   focus(): void;
   /** Tear down the editor and free resources. */

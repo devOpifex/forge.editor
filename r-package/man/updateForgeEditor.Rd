@@ -10,6 +10,7 @@ updateForgeEditor(
   merge = FALSE,
   action = NULL,
   read_only = NULL,
+  theme = NULL,
   session = shiny::getDefaultReactiveDomain()
 )
 }
@@ -27,6 +28,10 @@ the current contents instead of replacing the document outright.}
 
 \item{read_only}{Optional logical. When not `NULL`, toggles the editor's
 read-only state without re-rendering.}
+
+\item{theme}{Optional `"light"` or `"dark"`. When not `NULL`, swaps the
+editor's colour theme in place, preserving the document, selection, undo
+history and any live LSP connection.}
 
 \item{session}{The Shiny session; defaults to the current reactive domain.}
 }

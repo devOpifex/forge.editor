@@ -156,6 +156,9 @@ renderForgeEditor <- function(expr, env = parent.frame(), quoted = FALSE) {
 #'   `"acceptAll"` or `"rejectAll"`.
 #' @param read_only Optional logical. When not `NULL`, toggles the editor's
 #'   read-only state without re-rendering.
+#' @param theme Optional `"light"` or `"dark"`. When not `NULL`, swaps the
+#'   editor's colour theme in place, preserving the document, selection, undo
+#'   history and any live LSP connection.
 #' @param session The Shiny session; defaults to the current reactive domain.
 #'
 #' @details When a merge is fully resolved (every chunk accepted or rejected, or
@@ -172,6 +175,7 @@ updateForgeEditor <- function(
   merge = FALSE,
   action = NULL,
   read_only = NULL,
+  theme = NULL,
   session = shiny::getDefaultReactiveDomain()
 ) {
   if (is.null(session)) {
@@ -191,7 +195,12 @@ updateForgeEditor <- function(
     message$action <- match.arg(action, c("acceptAll", "rejectAll"))
   }
 
-  message$readOnly <- isTRUE(read_only)
+  if (!is.null(read_only)) {
+    message$readOnly <- isTRUE(read_only)
+  }
+  if (!is.null(theme)) {
+    message$theme <- match.arg(theme, c("light", "dark"))
+  }
   session$sendCustomMessage("forgeEditor:update", message)
   invisible()
 }

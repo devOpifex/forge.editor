@@ -56,9 +56,11 @@ HTMLWidgets.widget({
             instance.setValue(x.value);
             lastValue = x.value;
           }
-          // Re-apply decorations on re-render so a Shiny `renderForgeEditor`
-          // that swaps the spec list takes effect without a full remount.
+          // Re-apply decorations and theme on re-render so a Shiny
+          // `renderForgeEditor` that swaps either takes effect without a
+          // full remount.
           instance.setDecorations(toNativeDecorations(x.decorations));
+          if (typeof x.theme === "string") instance.setTheme(x.theme);
           return;
         }
 
@@ -131,8 +133,10 @@ HTMLWidgets.widget({
         // Bulk-resolve a merge already on screen.
         if (msg.action === "acceptAll") instance.acceptAllChanges();
         if (msg.action === "rejectAll") instance.rejectAllChanges();
-        // Toggle read-only at runtime.
+        // Toggle read-only at runtime. Absent when R sent `read_only = NULL`.
         if (typeof msg.readOnly === "boolean") instance.setReadOnly(msg.readOnly);
+        // Swap the colour theme at runtime.
+        if (typeof msg.theme === "string") instance.setTheme(msg.theme);
       },
 
       // Public helper for downstream JS to swap decoration specs at runtime
